@@ -46,11 +46,12 @@ class worknoteBook(object):
         return frame.format(wn_list = wn_list)
         
 if __name__ == '__main__':
-     conf = {
-         '/': {
-             'tools.staticdir.on': True,
-             'tools.staticdir.root': os.path.abspath('../worknote/testbench'),
-             'tools.staticdir.dir': '.'
-         }
-     }
-     cherrypy.quickstart(worknoteBook('../worknote/testbench'), '/', conf)
+    conf = {'/': {'tools.staticdir.on': True,
+                  'tools.staticdir.root': os.path.abspath('../worknote/testbench'),
+                  'tools.staticdir.dir': '.'
+                  }
+            }
+    cherrypy.config.update({'server.socket_host': '0.0.0.0',
+                            'server.socket_port': 8080,
+                           })
+    cherrypy.quickstart(worknoteBook('../worknote/testbench'), '/', conf)
