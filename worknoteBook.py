@@ -29,12 +29,14 @@ class worknoteBookServer(object):
         from os.path import abspath, isdir, join, exists
         from os import listdir
         self.worknotes = {}
+        self.worknote_list = []
         for wn_workdir in [name for name in listdir(self.storagedir)
             if isdir(join(self.storagedir, name))
             and exists(join(join(self.storagedir, name), 'notedata.worknote'))]:
                     self.worknotes[wn_workdir] = Worknote(join(self.storagedir, wn_workdir))
+                    self.worknote_list.append([wn_workdir, self.worknotes[wn_workdir].metadata.metadata['title']])
                     self.worknotes[wn_workdir].build('HTML')
-        head = self.head.format(metadata='<meta http-equiv="refresh" content="2; url=./">')
+        head = self.head.format(metadata='<meta http-equiv="refresh" content="5; url=./">')
         foot = self.foot.format()
         return '{head:s}<p>Rebuilding worknote list...</p>{foot:s}'.format(head=head, foot=foot)
 
@@ -48,16 +50,16 @@ class worknoteBookServer(object):
     </header>
     <main>
         <article>
-        <ul>
+        <ol>
         {wn_list:s}
-        </ul>
+        </ol>
         </article>
     </main>
 {foot:s}'''
         wn_wrapper = '<li><a href="{wn_dir:s}/Report.html">{wn_title:s}</a></li>\n'
         wn_list = ''
-        for wn_workdir in self.worknotes:
-            wn_list += wn_wrapper.format(wn_dir = wn_workdir, wn_title = self.worknotes[wn_workdir].metadata.metadata['title'])
+        for wn_workdir, title in self.worknote_list:
+            wn_list += wn_wrapper.format(wn_dir=wn_workdir, wn_title=title) 
         return frame.format(head=head, foot=foot, wn_list=wn_list)
         
 if __name__ == '__main__':
