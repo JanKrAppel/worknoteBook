@@ -110,19 +110,38 @@ class worknoteBookServer(object):
                 res[index + 1] = wn[1]
             return json.dumps(res)
         
+class worknoteBookClient(object):
+
+    def __init__(self, server):
+        self.server = server
+    
+    def list_worknotes(self):
+        import json
+        from urllib2 import urlopen
+        res = urlopen('http://' + self.server + '/download')
+        wn_list = json.loads(res.read())
+        for index in wn_list:
+            print '{index:s}: {wn_title:s}'.format(index=index, wn_title=wn_list[index])
+    
+    def download_worknote(self, index, filename = None):
+        pass
+    
 if __name__ == '__main__':
     from sys import argv
     from os.path import abspath
-    if argv[1].lower() == 'server':
-        conf = {
-            '/': {
-                'tools.staticdir.on': True,
-                'tools.staticdir.root': abspath('../worknote/testbench'),
-                'tools.staticdir.dir': '.'
+    if len(argv) > 1:
+        command = argv[1].lower()
+        if command == 'server':
+            conf = {
+                '/': {
+                    'tools.staticdir.on': True,
+                    'tools.staticdir.root': abspath('../worknote/testbench'),
+                    'tools.staticdir.dir': '.'
+                }
             }
-        }
-        cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                                'server.socket_port': 8080})
-        cherrypy.quickstart(worknoteBookServer('../worknote/testbench'), '/', conf)
-    else:
-        print 'not implemented yet'
+            cherrypy.config.update({'server.socket_host': '0.0.0.0',
+                                    'server.socket_port': 8080})
+            cherrypy.quickstart(worknoteBookServer('../worknote/testbench'), '/', conf)
+        elif command == 'list':
+            client = worknoteBookClient('localhost:8080')
+            client.list_worknotes()
