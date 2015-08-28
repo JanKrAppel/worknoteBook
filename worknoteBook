@@ -78,16 +78,16 @@ class worknoteBookServer(object):
         
     @cherrypy.expose
     def download(self, index=None):
-        from tempfile import gettempdir
-        from cherrypy.lib.static import serve_download
-        from os.path import join, exists
-        from os import listdir
-        from zipfile import ZipFile
         if not index is None:
+            from tempfile import gettempdir
+            from cherrypy.lib.static import serve_download
+            from os.path import join, exists
+            from os import listdir
+            from zipfile import ZipFile
             try:
-                index = int(index) - 1
-            except ValueError:
-                return 'Index must be integer'
+                index = parse_index(index)[0] - 1
+            except ValueError, e:
+                return str(e)
             if index < 0 or index > len(self.worknote_list) - 1:
                 return 'Index out of range'
             wn_dir, wn_title, wn_date = self.worknote_list[index]
@@ -104,8 +104,11 @@ class worknoteBookServer(object):
             else:
                 return 'Error creating ZIP archive for download'
         else:
-            #this should return a json object describing the worknotes available
-            return 'No index given'
+            import json
+            res = {}
+            for index, wn in enumerate(self.worknote_list):
+                res[index + 1] = wn[1]
+            return json.dumps(res)
         
 if __name__ == '__main__':
     from sys import argv
