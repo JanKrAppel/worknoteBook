@@ -23,6 +23,8 @@ class worknoteBookClient(object):
         from urllib2 import urlopen
         from tempfile import gettempdir
         from os.path import join
+        from worknoteBookHelpers import parse_index
+        index = parse_index(index)
         tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
         server_url = 'http://{server:s}/download?index={index:d}'.format(server = self.server, index = index)
         server = urlopen(server_url)

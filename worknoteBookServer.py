@@ -7,10 +7,6 @@ Created on Fri Aug 28 23:18:40 2015
 
 import cherrypy
 
-def parse_index(index):
-    from worknote.items import parse_index
-    return parse_index(index)[0:2]
-
 class worknoteBookServer(object):
 
     def __init__(self, storagedir):
@@ -84,6 +80,7 @@ class worknoteBookServer(object):
             from os.path import join, exists
             from os import listdir
             from zipfile import ZipFile
+            from worknoteBookHelpers import parse_index
             try:
                 index = parse_index(index)[0] - 1
             except ValueError, e:
