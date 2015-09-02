@@ -106,3 +106,25 @@ class worknoteBookServer(object):
             for index, wn in enumerate(self.worknote_list):
                 res[index + 1] = wn[1]
             return json.dumps(res)
+
+    @cherrypy.config(**{'response.timeout': 3600}) # default is 300s
+    @cherrypy.expose
+    def upload(self):
+        from tempfile import gettempdir
+        from shutil import copyfileobj
+        from os.path import join, split
+        from zipfile import ZipFile
+        from worknoteBookHelpers import unzip_worknote
+        dst_file = join(gettempdir(), 'worknoteBook_upload.zip')                
+        with open(dst_file, 'wb') as outfile:
+            copyfileobj(cherrypy.request.body, outfile)
+        zipfile = ZipFile(dst_file, 'r')
+        wn_dir = split(zipfile.namelist()[0])[0]
+        zipfile.close()
+        try:
+            unzip_worknote(dst_file, join(self.storagedir, wn_dir))
+        except OSError, e:
+            return 'Fail (' + str(e) + ')'
+        else:
+            self.reload_worknotes()
+            return 'Success'
