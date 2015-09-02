@@ -18,17 +18,20 @@ class worknoteBookClient(object):
         for index in wn_list:
             print '{index:s}: {wn_title:s}'.format(index=index, wn_title=wn_list[index])
     
-    def download(self, index):
-        from zipfile import ZipFile
-        from urllib2 import urlopen
+    def download(self, index, workdir):
+        from worknoteBookHelpers import unzip_worknote
+        from urllib2 import urlopen, URLError
         from tempfile import gettempdir
         from os.path import join
         from worknoteBookHelpers import parse_index
-        index = parse_index(index)
+        index = parse_index(index)[0]
         tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
         server_url = 'http://{server:s}/download?index={index:d}'.format(server = self.server, index = index)
-        server = urlopen(server_url)
-        with open(tmpfn, 'wb') as tmpfile:
-            tmpfile.write(server.read())
-        with ZipFile(tmpfn, 'r') as zipfile:
-            zipfile.extractall('.')
+        try:        
+            server = urlopen(server_url)
+            with open(tmpfn, 'wb') as tmpfile:
+                tmpfile.write(server.read())
+        except URLError, e:
+            print 'ERROR: Download failed ({:s})'.format(str(e))
+            return
+        unzip_worknote(tmpfn, workdir)

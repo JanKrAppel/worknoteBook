@@ -9,8 +9,11 @@ Created on Thu Aug 27 20:41:07 2015
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('command', help='Command to execute')
+    parser.add_argument('command', help='Command to execute', choices=['server',
+                                                                       'list',
+                                                                       'download'])
     parser.add_argument('--index', '-i', type=int, default=1, help='Select the index')
+    parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     args = parser.parse_args()
     if args.command == 'server':
         from os.path import abspath
@@ -33,6 +36,4 @@ if __name__ == '__main__':
     elif args.command == 'download':
         from worknoteBookClient import worknoteBookClient
         client = worknoteBookClient('localhost', 8080)
-        client.download(args.index)
-    else:
-        print 'Not implemented yet'
+        client.download(args.index, args.workdir)
