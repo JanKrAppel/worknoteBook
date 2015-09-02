@@ -7,26 +7,32 @@ Created on Thu Aug 27 20:41:07 2015
 """
 
 if __name__ == '__main__':
-    from sys import argv
-    from os.path import abspath
-    if len(argv) > 1:
-        command = argv[1].lower()
-        if command == 'server':
-            import cherrypy
-            from worknoteBookServer import worknoteBookServer
-            conf = {
-                '/': {
-                    'tools.staticdir.on': True,
-                    'tools.staticdir.root': abspath('../worknote/testbench'),
-                    'tools.staticdir.dir': '.'
-                }
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument('command', help='Command to execute')
+    parser.add_argument('--index', '-i', type=int, default=1, help='Select the index')
+    args = parser.parse_args()
+    if args.command == 'server':
+        from os.path import abspath
+        import cherrypy
+        from worknoteBookServer import worknoteBookServer
+        conf = {
+            '/': {
+                'tools.staticdir.on': True,
+                'tools.staticdir.root': abspath('../worknote/testbench'),
+                'tools.staticdir.dir': '.'
             }
-            cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                                    'server.socket_port': 8080})
-            cherrypy.quickstart(worknoteBookServer('../worknote/testbench'), '/', conf)
-        elif command == 'list':
-            from worknoteBookClient import worknoteBookClient
-            client = worknoteBookClient('localhost:8080')
-            client.list_worknotes()
-        else:
-            print 'Not implemented yet'
+        }
+        cherrypy.config.update({'server.socket_host': '0.0.0.0',
+                                'server.socket_port': 8080})
+        cherrypy.quickstart(worknoteBookServer('../worknote/testbench'), '/', conf)
+    elif args.command == 'list':
+        from worknoteBookClient import worknoteBookClient
+        client = worknoteBookClient('localhost', 8080)
+        client.list()
+    elif args.command == 'download':
+        from worknoteBookClient import worknoteBookClient
+        client = worknoteBookClient('localhost', 8080)
+        client.download(args.index)
+    else:
+        print 'Not implemented yet'

@@ -14,6 +14,7 @@ def parse_index(index):
 class worknoteBookServer(object):
 
     def __init__(self, storagedir):
+        from os.path import abspath
         self.storagedir = abspath(storagedir)
         self.head = '''<!doctype html>
 <html>
@@ -29,7 +30,7 @@ class worknoteBookServer(object):
     @cherrypy.expose
     def reload_worknotes(self):
         from worknote import Worknote
-        from os.path import abspath, isdir, join, exists
+        from os.path import isdir, join, exists
         from os import listdir
         self.worknotes = {}
         self.worknote_list = []

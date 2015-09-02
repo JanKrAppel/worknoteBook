@@ -7,10 +7,10 @@ Created on Fri Aug 28 23:19:40 2015
 
 class worknoteBookClient(object):
 
-    def __init__(self, server):
-        self.server = server
+    def __init__(self, server_url, server_port):
+        self.server = '{url:s}:{port:d}'.format(url=server_url, port=server_port)
     
-    def list_worknotes(self):
+    def list(self):
         import json
         from urllib2 import urlopen
         res = urlopen('http://' + self.server + '/download')
@@ -18,5 +18,15 @@ class worknoteBookClient(object):
         for index in wn_list:
             print '{index:s}: {wn_title:s}'.format(index=index, wn_title=wn_list[index])
     
-    def download_worknote(self, index, filename = None):
-        pass
+    def download(self, index):
+        from zipfile import ZipFile
+        from urllib2 import urlopen
+        from tempfile import gettempdir
+        from os.path import join
+        tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
+        server_url = 'http://{server:s}/download?index={index:d}'.format(server = self.server, index = index)
+        server = urlopen(server_url)
+        with open(tmpfn, 'wb') as tmpfile:
+            tmpfile.write(server.read())
+        with ZipFile(tmpfn, 'r') as zipfile:
+            zipfile.extractall('.')
