@@ -22,20 +22,24 @@ class worknoteBookServer(object):
         self.foot = '''    </body>
 </html>'''
         self.reload_worknotes()
+        self.storagedir_locked = False
 
     @cherrypy.expose
     def reload_worknotes(self):
         from worknote import Worknote
         from os.path import isdir, join, exists
         from os import listdir
+        self.storagedir_locked = True
         self.worknotes = {}
         self.worknote_list = []
         for wn_workdir in [name for name in listdir(self.storagedir)
             if isdir(join(self.storagedir, name))
             and exists(join(join(self.storagedir, name), 'notedata.worknote'))]:
-                    self.worknotes[wn_workdir] = Worknote(join(self.storagedir, wn_workdir))
-                    self.worknote_list.append([wn_workdir, self.worknotes[wn_workdir].metadata.metadata['title'], self.worknotes[wn_workdir].metadata.metadata['date']])
-                    self.worknotes[wn_workdir].build('HTML')
+                self.worknotes[wn_workdir] = Worknote(join(self.storagedir, wn_workdir))
+                self.worknote_list.append([wn_workdir, self.worknotes[wn_workdir].metadata.metadata['title'], self.worknotes[wn_workdir].metadata.metadata['date']])
+                self.worknotes[wn_workdir].build('HTML')
+                self.worknotes[wn_workdir].build('Beamer')
+        self.storagedir_locked = False
         head = self.head.format(metadata='<meta http-equiv="refresh" content="5; url=./">')
         foot = self.foot.format()
         return '{head:s}<p>Rebuilding worknote list, redirecting in 5 seconds...</p>{foot:s}'.format(head=head, foot=foot)
@@ -44,6 +48,8 @@ class worknoteBookServer(object):
     def index(self):
         head = self.head.format(metadata='<title>Workbook</title>\n')
         foot = self.foot.format()
+        if self.storagedir_locked:
+            return head + 'The server is currently busy, please reload the site in a bit...' + foot
         frame = '''{head:s}
     <header>
         <p><a href="./reload_worknotes">Reload worknotes</a></p>
@@ -56,7 +62,7 @@ class worknoteBookServer(object):
         </article>
     </main>
 {foot:s}'''
-        wn_wrapper = '<li><a href="{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a></li>\n'
+        wn_wrapper = '<li><a href="{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
         wn_list = ''
         for index, entry in enumerate(self.worknote_list):
             wn_workdir, title, date = entry            
