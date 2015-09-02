@@ -31,7 +31,6 @@ def unzip_worknote(src_fn, target_dir = None):
         wn_dir = split(files[0])[0]
         if target_dir is None:
             target_dir = wn_dir
-        print target_dir, wn_dir
         if exists(target_dir):
             raise OSError('The target directory already exists')
         else:

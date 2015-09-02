@@ -34,4 +34,7 @@ class worknoteBookClient(object):
         except URLError, e:
             print 'ERROR: Download failed ({:s})'.format(str(e))
             return
-        unzip_worknote(tmpfn, workdir)
+        try:
+            unzip_worknote(tmpfn, workdir)
+        except OSError, e:
+            print 'ERROR: Unable to download file ({:s})'.format(str(e))
