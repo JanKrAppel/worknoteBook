@@ -76,11 +76,9 @@ class worknoteBookServer(object):
     def download(self, index=None):
         if not index is None:
             from tempfile import gettempdir
-            from cherrypy.lib.static import serve_download
             from os.path import join, exists
-            from os import listdir
-            from zipfile import ZipFile
-            from worknoteBookHelpers import parse_index
+            from cherrypy.lib.static import serve_download
+            from worknoteBookHelpers import parse_index, zip_worknote
             try:
                 index = parse_index(index)[0] - 1
             except ValueError, e:
@@ -91,11 +89,7 @@ class worknoteBookServer(object):
             tmpdir = gettempdir()
             fn_wnzip = '{wn_title:s}.zip'.format(wn_title=wn_title)
             dl_filepath = join(tmpdir, fn_wnzip)
-            zf = ZipFile(dl_filepath, 'w')
-            zf.write(join(self.storagedir, wn_dir), wn_dir)
-            for fn in listdir(join(self.storagedir, wn_dir)):
-                zf.write(join(join(self.storagedir, wn_dir), fn), join(wn_dir, fn))
-            zf.close()
+            zip_worknote(join(self.storagedir, wn_dir), dl_filepath)
             if exists(dl_filepath):
                 return serve_download(dl_filepath, name=fn_wnzip)    
             else:
