@@ -107,20 +107,28 @@ class worknoteBookServer(object):
                 res[index + 1] = wn[1]
             return json.dumps(res)
 
-    @cherrypy.config(**{'response.timeout': 3600}) # default is 300s
+    @cherrypy.config(**{'response.timeout': 3600})
     @cherrypy.expose
     def upload(self):
         from tempfile import gettempdir
-        from shutil import copyfileobj
-        from os.path import join, split
+        from shutil import copyfileobj, rmtree
+        from os.path import join, split, exists
         from zipfile import ZipFile
         from worknoteBookHelpers import unzip_worknote
-        dst_file = join(gettempdir(), 'worknoteBook_upload.zip')                
+        dst_file = join(gettempdir(), 'worknoteBook_upload.zip')   
         with open(dst_file, 'wb') as outfile:
             copyfileobj(cherrypy.request.body, outfile)
-        zipfile = ZipFile(dst_file, 'r')
-        wn_dir = split(zipfile.namelist()[0])[0]
-        zipfile.close()
+        if 'X-Worknote-Workdir' in cherrypy.request.headers:
+            wn_dir = cherrypy.request.headers['X-Worknote-Workdir']
+        else:
+            zipfile = ZipFile(dst_file, 'r')
+            wn_dir = split(zipfile.namelist()[0])[0]
+            zipfile.close()
+        if 'X-Worknote-Overwrite' in cherrypy.request.headers:
+            overwrite = cherrypy.request.headers['X-Worknote-Overwrite'] == 'True'
+            if  overwrite:
+                if exists(join(self.storagedir, wn_dir)):
+                    rmtree(join(self.storagedir, wn_dir))
         try:
             unzip_worknote(dst_file, join(self.storagedir, wn_dir))
         except OSError, e:
