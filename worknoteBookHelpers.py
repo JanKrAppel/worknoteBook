@@ -39,3 +39,48 @@ def unzip_worknote(src_fn, target_dir = None):
             zipfile.extractall(tmpdir)
             for fn in listdir(join(tmpdir, wn_dir)):
                 move(join(join(tmpdir, wn_dir), fn), target_dir)
+                
+class Configuration(object):
+    
+    def __init__(self, cfg_file, default_cfg = None):
+        from ConfigParser import SafeConfigParser
+        self.cfg_file = cfg_file
+        self.config = SafeConfigParser()
+        self.read_cfg_file()
+        if not default_cfg is None:
+            pass
+    
+    def __getitem__(self, indices):
+        indices = indices[0:2]
+        section, option = indices
+        if not section in self.config.sections():
+            return None
+        if not option in self.config.options(section):
+            return None
+        val = self.config.get(section, option)
+        try:
+            val = float(val)
+        except ValueError:
+            pass
+        if val == 'False':
+            val = False
+        elif val == 'True':
+            val = True
+        return val
+    
+    def __setitem__(self, indices, value):
+        indices = indices[0:2]
+        section, option = indices
+        if not section in self.config.sections:
+            self.config.add_section(section)
+        if not option in self.config.options(section):
+            self.config.set(section, option, value)
+            
+    def update_cfg_file(self):
+        with open(self.cfg_file, 'w') as outfile:
+            self.config.write(outfile)
+    
+    def read_cfg_file(self):
+        from os.path import exists
+        if exists(self.cfg_file):
+            self.config.read(self.cfg_file)
