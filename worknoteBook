@@ -14,32 +14,40 @@ if __name__ == '__main__':
     parser.add_argument('command', help='Command to execute', choices=['server',
                                                                        'list',
                                                                        'download',
-                                                                       'upload'])
+                                                                       'upload',
+                                                                       'add_server'])
     parser.add_argument('--index', '-i', type=int, default=1, help='Select the index')
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     parser.add_argument('--overwrite', '-o', action='store_true', help='Select the working directory')
+    parser.add_argument('--server', '-s', type=str, default='localhost', help='Set the server name')
+    parser.add_argument('--url', type=str, default='', help='Set the server URL')
+    parser.add_argument('--port', type=int, default=0, help='Set the server port')
     args = parser.parse_args()
     
     if not exists(expanduser('~/.worknoteBook/storage')):
         makedirs(expanduser('~/.worknoteBook/storage'))
     if args.command == 'server':
         import cherrypy
+        from worknoteBookServer import worknoteBookServer
+        from worknoteBookHelpers import Configuration
         default_cfg = {'server': {'storagedir': '~/.worknoteBook/storage',
                                   'url': '0.0.0.0',
                                   'port': 8080}}
-        from worknoteBookServer import worknoteBookServer
-        from worknoteBookHelpers import Configuration
         server_cfg = Configuration(expanduser('~/.worknoteBook/server.cfg'), default_cfg)
         cherrypy.quickstart(worknoteBookServer(server_cfg))
-    elif args.command == 'list':
+    else:
         from worknoteBookClient import worknoteBookClient
-        client = worknoteBookClient('localhost', 8080)
-        client.list()
-    elif args.command == 'download':
-        from worknoteBookClient import worknoteBookClient
-        client = worknoteBookClient('localhost', 8080)
-        client.download(args.index, args.workdir)
-    elif args.command == 'upload':
-        from worknoteBookClient import worknoteBookClient
-        client = worknoteBookClient('localhost', 8080)
-        client.upload(args.workdir, args.overwrite)
+        from worknoteBookHelpers import Configuration
+        default_cfg = {'localhost': {'url': '127.0.0.1',
+                                     'port': 8080}}
+        client_cfg = Configuration(expanduser('~/.worknoteBook/client.cfg'), default_cfg)
+        client = worknoteBookClient(client_cfg)
+        if args.command == 'list':
+            client.list()
+        elif args.command == 'download':
+            client.download(args.index, args.workdir)
+        elif args.command == 'upload':
+            client.upload(args.workdir, args.overwrite)
+        elif args.command == 'add_server':
+            client.add_server(args.server, args.url, args.port)
+            

@@ -19,18 +19,23 @@ class FileLenIO(FileIO):
 
 class worknoteBookClient(object):
 
-    def __init__(self, server_url, server_port):
-        self.server = '{url:s}:{port:d}'.format(url=server_url, port=server_port)
+    def __init__(self, config):
+        self.config = config
+        self.config.update_cfg_file()
+        
+    def get_server(self, name='localhost'):
+        return '{url:s}:{port:d}'.format(url=self.config[[name, 'url']],
+                                         port=self.config[[name, 'port']])
     
-    def list(self):
+    def list(self, name='localhost'):
         import json
         from urllib2 import urlopen
-        res = urlopen('http://' + self.server + '/download')
+        res = urlopen('http://' + self.get_server(name) + '/download')
         wn_list = json.loads(res.read())
         for index in wn_list:
             print '{index:s}: {wn_title:s}'.format(index=index, wn_title=wn_list[index])
     
-    def download(self, index, workdir):
+    def download(self, index, workdir, name='localhost'):
         from worknoteBookHelpers import unzip_worknote
         from urllib2 import urlopen, URLError
         from tempfile import gettempdir
@@ -38,7 +43,7 @@ class worknoteBookClient(object):
         from worknoteBookHelpers import parse_index
         index = parse_index(index)[0]
         tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
-        server_url = 'http://{server:s}/download?index={index:d}'.format(server = self.server, index = index)
+        server_url = 'http://{server:s}/download?index={index:d}'.format(server = self.get_server(name), index = index)
         try:        
             server = urlopen(server_url)
             with open(tmpfn, 'wb') as tmpfile:
@@ -51,7 +56,7 @@ class worknoteBookClient(object):
         except OSError, e:
             print 'ERROR: Unable to download file ({:s})'.format(str(e))
             
-    def upload(self, workdir, overwrite = False):
+    def upload(self, workdir, overwrite=False, name='localhost'):
         from urllib2 import Request, urlopen, HTTPError, URLError
         from worknoteBookHelpers import zip_worknote
         from tempfile import gettempdir
@@ -63,7 +68,7 @@ class worknoteBookClient(object):
             return
         zip_worknote(workdir, zip_fn)
         up_file = FileLenIO(zip_fn, 'rb')
-        request = Request('http://{:s}/upload'.format(self.server), up_file)
+        request = Request('http://{:s}/upload'.format(self.get_server(name)), up_file)
         request.add_header('Content-Type', 'application/octet-stream')
         request.add_header('X-Worknote-Workdir', workdir)
         request.add_header('X-Worknote-Overwrite', str(overwrite))
@@ -80,4 +85,8 @@ class worknoteBookClient(object):
             import re
             msg = re.match('Fail (.*)', response)
             print 'ERROR: Upload failed {:s}'.format(msg.group(1))
-        
+            
+    def add_server(self, name, url, port):
+        self.config[[name, 'url']] = url
+        self.config[[name, 'port']] = port
+        self.config.update_cfg_file()
