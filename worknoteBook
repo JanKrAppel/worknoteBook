@@ -8,6 +8,8 @@ Created on Thu Aug 27 20:41:07 2015
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
+    from os.path import exists, expanduser
+    from os import makedirs
     parser = ArgumentParser()
     parser.add_argument('command', help='Command to execute', choices=['server',
                                                                        'list',
@@ -17,20 +19,18 @@ if __name__ == '__main__':
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     parser.add_argument('--overwrite', '-o', action='store_true', help='Select the working directory')
     args = parser.parse_args()
+    
+    if not exists(expanduser('~/.worknoteBook/storage')):
+        makedirs(expanduser('~/.worknoteBook/storage'))
     if args.command == 'server':
-        from os.path import abspath
         import cherrypy
+        default_cfg = {'server': {'storagedir': '~/.worknoteBook/storage',
+                                  'url': '0.0.0.0',
+                                  'port': 8080}}
         from worknoteBookServer import worknoteBookServer
-        conf = {
-            '/': {
-                'tools.staticdir.on': True,
-                'tools.staticdir.root': abspath('../worknote/testbench'),
-                'tools.staticdir.dir': '.'
-            }
-        }
-        cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                                'server.socket_port': 8080})
-        cherrypy.quickstart(worknoteBookServer('../worknote/testbench'), '/', conf)
+        from worknoteBookHelpers import Configuration
+        server_cfg = Configuration(expanduser('~/.worknoteBook/server.cfg'), default_cfg)
+        cherrypy.quickstart(worknoteBookServer(server_cfg))
     elif args.command == 'list':
         from worknoteBookClient import worknoteBookClient
         client = worknoteBookClient('localhost', 8080)

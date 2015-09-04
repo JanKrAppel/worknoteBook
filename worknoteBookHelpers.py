@@ -46,9 +46,11 @@ class Configuration(object):
         from ConfigParser import SafeConfigParser
         self.cfg_file = cfg_file
         self.config = SafeConfigParser()
-        self.read_cfg_file()
         if not default_cfg is None:
-            pass
+            for section in default_cfg:
+                for option in default_cfg[section]:
+                    self.__put_item([section, option], default_cfg[section][option])
+        self.read_cfg_file()
     
     def __getitem__(self, indices):
         indices = indices[0:2]
@@ -59,22 +61,35 @@ class Configuration(object):
             return None
         val = self.config.get(section, option)
         try:
+            val = int(val)
+        except ValueError:
+            pass
+        else:
+            return val
+        try:
             val = float(val)
         except ValueError:
             pass
+        else:
+            return val
         if val == 'False':
-            val = False
+            return False
         elif val == 'True':
-            val = True
+            return True
         return val
-    
-    def __setitem__(self, indices, value):
+        
+    def __put_item(self, indices, value):
         indices = indices[0:2]
+        value = str(value)
         section, option = indices
-        if not section in self.config.sections:
+        if not section in self.config.sections():
             self.config.add_section(section)
         if not option in self.config.options(section):
             self.config.set(section, option, value)
+    
+    def __setitem__(self, indices, value):
+        self.__put_item(indices, value)
+        self.update_cfg_file()
             
     def update_cfg_file(self):
         with open(self.cfg_file, 'w') as outfile:

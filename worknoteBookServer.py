@@ -7,11 +7,19 @@ Created on Fri Aug 28 23:18:40 2015
 
 import cherrypy
 
-class worknoteBookServer(object):
+class StaticDir(object):
+    def __init__(self):
+        pass
 
-    def __init__(self, storagedir):
-        from os.path import abspath
-        self.storagedir = abspath(storagedir)
+class worknoteBookServer(object):
+    
+    def __getabsdir(self, dirname):
+        from os.path import abspath, expanduser, expandvars
+        return abspath(expandvars(expanduser(dirname)))
+        
+    def __init__(self, config):
+        self.config = config
+        self.storagedir = self.__getabsdir(self.config[['server', 'storagedir']])
         self.head = '''<!doctype html>
 <html>
     <head>
@@ -23,6 +31,16 @@ class worknoteBookServer(object):
 </html>'''
         self.reload_worknotes()
         self.storagedir_locked = False
+        self.__update_config()
+        
+    def __update_config(self):
+        cherrypy.config.update({'server.socket_host': self.config[['server', 'url']],
+                                'server.socket_port': self.config[['server', 'port']]})        
+        cherrypy.tree.mount(StaticDir(), '/storage', config = {'/': {
+                    'tools.staticdir.on': True,
+                    'tools.staticdir.root': self.storagedir,
+                    'tools.staticdir.dir': '.'
+                }})
 
     @cherrypy.expose
     def reload_worknotes(self):
@@ -62,7 +80,7 @@ class worknoteBookServer(object):
         </article>
     </main>
 {foot:s}'''
-        wn_wrapper = '<li><a href="{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
+        wn_wrapper = '<li><a href="storage/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="storage/{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
         wn_list = ''
         for index, entry in enumerate(self.worknote_list):
             wn_workdir, title, date = entry            
