@@ -17,7 +17,7 @@ if __name__ == '__main__':
                                                                        'upload',
                                                                        'add_server',
                                                                        'set_default_server'])
-    parser.add_argument('--index', '-i', type=int, default=1, help='Select the index')
+    parser.add_argument('--index', '-i', type=str, default='1', help='Select the index')
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     parser.add_argument('--overwrite', '-o', action='store_true', help='Select the working directory')
     parser.add_argument('--server', '-s', type=str, default='', help='Set the server name')

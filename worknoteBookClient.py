@@ -44,8 +44,8 @@ class worknoteBookClient(object):
         except HTTPError, e:
             print 'ERROR: Download failed ({:s})'.format(str(e))
             return
-        for index in wn_list:
-            print '{index:s}: {wn_title:s}'.format(index=index, wn_title=wn_list[index])
+        for entry in wn_list:
+            print entry
     
     def download(self, index, workdir, name=None):
         from worknoteBookHelpers import unzip_worknote
@@ -53,9 +53,13 @@ class worknoteBookClient(object):
         from tempfile import gettempdir
         from os.path import join
         from worknoteBookHelpers import parse_index
-        index = parse_index(index)[0]
+        index = parse_index(index)[0:2]
+        if len(index) == 1:
+            index = '{:d}'.format(index[0])
+        elif len(index) == 2:
+            index = '{:d}:{:d}'.format(index[0], index[1])
         tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
-        server_url = 'http://{server:s}/download?index={index:d}'.format(server = self.get_server(name), index = index)
+        server_url = 'http://{server:s}/download?index={index:s}'.format(server = self.get_server(name), index = index)
         try:        
             server = urlopen(server_url)
             with open(tmpfn, 'wb') as tmpfile:
@@ -67,6 +71,9 @@ class worknoteBookClient(object):
             unzip_worknote(tmpfn, workdir)
         except OSError, e:
             print 'ERROR: Unable to download file ({:s})'.format(str(e))
+        except IOError:
+            with open(tmpfn, 'r') as errfile:
+                print 'ERROR: Not a zip file ({:s})'.format(errfile.read())
             
     def upload(self, workdir, overwrite=False, name=None):
         from urllib2 import Request, urlopen, HTTPError, URLError
