@@ -99,3 +99,6 @@ class Configuration(object):
         from os.path import exists
         if exists(self.cfg_file):
             self.config.read(self.cfg_file)
+            
+    def get_sections(self):
+        return self.config.sections()

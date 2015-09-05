@@ -23,19 +23,31 @@ class worknoteBookClient(object):
         self.config = config
         self.config.update_cfg_file()
         
-    def get_server(self, name='localhost'):
+    def get_server(self, name=None):
+        if name is None:
+            name = self.config[['client_defaults', 'server']]
+        if not name in self.config.get_sections():
+            print 'ERROR: Server name not found.'
+            return
         return '{url:s}:{port:d}'.format(url=self.config[[name, 'url']],
                                          port=self.config[[name, 'port']])
     
-    def list(self, name='localhost'):
+    def list(self, name=None):
         import json
-        from urllib2 import urlopen
-        res = urlopen('http://' + self.get_server(name) + '/download')
-        wn_list = json.loads(res.read())
+        from urllib2 import urlopen, URLError, HTTPError
+        try:
+            res = urlopen('http://' + self.get_server(name) + '/download')
+            wn_list = json.loads(res.read())
+        except URLError, e:
+            print 'ERROR: Download failed ({:s})'.format(str(e))
+            return
+        except HTTPError, e:
+            print 'ERROR: Download failed ({:s})'.format(str(e))
+            return
         for index in wn_list:
             print '{index:s}: {wn_title:s}'.format(index=index, wn_title=wn_list[index])
     
-    def download(self, index, workdir, name='localhost'):
+    def download(self, index, workdir, name=None):
         from worknoteBookHelpers import unzip_worknote
         from urllib2 import urlopen, URLError
         from tempfile import gettempdir
@@ -56,7 +68,7 @@ class worknoteBookClient(object):
         except OSError, e:
             print 'ERROR: Unable to download file ({:s})'.format(str(e))
             
-    def upload(self, workdir, overwrite=False, name='localhost'):
+    def upload(self, workdir, overwrite=False, name=None):
         from urllib2 import Request, urlopen, HTTPError, URLError
         from worknoteBookHelpers import zip_worknote
         from tempfile import gettempdir
@@ -87,6 +99,19 @@ class worknoteBookClient(object):
             print 'ERROR: Upload failed {:s}'.format(msg.group(1))
             
     def add_server(self, name, url, port):
+        if name == 'client_defaults':
+            print 'ERROR: Server name not allowed.'
+            return
         self.config[[name, 'url']] = url
         self.config[[name, 'port']] = port
+        self.config.update_cfg_file()
+    
+    def set_default_server(self, name):
+        if name == 'client_defaults':
+            print 'ERROR: Server name not allowed.'
+            return
+        if not name in self.config.get_sections():
+            print 'ERROR: Server name not configured.'
+            return
+        self.config[['client_defaults', 'server']] = name
         self.config.update_cfg_file()

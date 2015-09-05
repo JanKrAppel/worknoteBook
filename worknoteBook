@@ -15,11 +15,12 @@ if __name__ == '__main__':
                                                                        'list',
                                                                        'download',
                                                                        'upload',
-                                                                       'add_server'])
+                                                                       'add_server',
+                                                                       'set_default_server'])
     parser.add_argument('--index', '-i', type=int, default=1, help='Select the index')
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     parser.add_argument('--overwrite', '-o', action='store_true', help='Select the working directory')
-    parser.add_argument('--server', '-s', type=str, default='localhost', help='Set the server name')
+    parser.add_argument('--server', '-s', type=str, default='', help='Set the server name')
     parser.add_argument('--url', type=str, default='', help='Set the server URL')
     parser.add_argument('--port', type=int, default=0, help='Set the server port')
     args = parser.parse_args()
@@ -38,16 +39,22 @@ if __name__ == '__main__':
     else:
         from worknoteBookClient import worknoteBookClient
         from worknoteBookHelpers import Configuration
-        default_cfg = {'localhost': {'url': '127.0.0.1',
+        default_cfg = {'client_defaults': {'server': 'localhost'},
+                       'localhost': {'url': '127.0.0.1',
                                      'port': 8080}}
         client_cfg = Configuration(expanduser('~/.worknoteBook/client.cfg'), default_cfg)
         client = worknoteBookClient(client_cfg)
+        server_name = args.server
+        if server_name == '':
+            server_name = None
         if args.command == 'list':
             client.list()
         elif args.command == 'download':
-            client.download(args.index, args.workdir)
+            client.download(args.index, args.workdir, server_name)
         elif args.command == 'upload':
-            client.upload(args.workdir, args.overwrite)
+            client.upload(args.workdir, args.overwrite, server_name)
         elif args.command == 'add_server':
-            client.add_server(args.server, args.url, args.port)
+            client.add_server(server_name, args.url, args.port)
+        elif args.command == 'add_server':
+            client.set_default_server(server_name)
             
