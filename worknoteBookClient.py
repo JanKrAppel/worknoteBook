@@ -23,20 +23,20 @@ class worknoteBookClient(object):
         self.config = config
         self.config.update_cfg_file()
         
-    def get_server(self, name=None):
-        if name is None:
-            name = self.config[['client_defaults', 'server']]
-        if not name in self.config.get_sections():
+    def get_server(self, servername=None):
+        if servername is None:
+            servername = self.config[['client_defaults', 'server']]
+        if not servername in self.config.get_sections():
             print 'ERROR: Server name not found.'
             return
-        return '{url:s}:{port:d}'.format(url=self.config[[name, 'url']],
-                                         port=self.config[[name, 'port']])
+        return '{url:s}:{port:d}'.format(url=self.config[[servername, 'url']],
+                                         port=self.config[[servername, 'port']])
     
-    def list(self, name=None):
+    def list(self, servername=None):
         import json
         from urllib2 import urlopen, URLError, HTTPError
         try:
-            res = urlopen('http://' + self.get_server(name) + '/download')
+            res = urlopen('http://' + self.get_server(servername) + '/download')
             wn_list = json.loads(res.read())
         except URLError, e:
             print 'ERROR: Download failed ({:s})'.format(str(e))
@@ -47,7 +47,7 @@ class worknoteBookClient(object):
         for entry in wn_list:
             print entry
     
-    def download(self, index, workdir, name=None):
+    def download(self, index, workdir, servername=None):
         from worknoteBookHelpers import unzip_worknote
         from urllib2 import urlopen, URLError
         from tempfile import gettempdir
@@ -59,7 +59,7 @@ class worknoteBookClient(object):
         elif len(index) == 2:
             index = '{:d}:{:d}'.format(index[0], index[1])
         tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
-        server_url = 'http://{server:s}/download?index={index:s}'.format(server = self.get_server(name), index = index)
+        server_url = 'http://{server:s}/download?index={index:s}'.format(server = self.get_server(servername), index = index)
         try:        
             server = urlopen(server_url)
             with open(tmpfn, 'wb') as tmpfile:
@@ -75,7 +75,7 @@ class worknoteBookClient(object):
             with open(tmpfn, 'r') as errfile:
                 print 'ERROR: Not a zip file ({:s})'.format(errfile.read())
             
-    def upload(self, workdir, overwrite=False, name=None):
+    def upload(self, workdir, overwrite=False, servername=None, chapter=''):
         from urllib2 import Request, urlopen, HTTPError, URLError
         from worknoteBookHelpers import zip_worknote
         from tempfile import gettempdir
@@ -87,7 +87,10 @@ class worknoteBookClient(object):
             return
         zip_worknote(workdir, zip_fn)
         up_file = FileLenIO(zip_fn, 'rb')
-        request = Request('http://{:s}/upload'.format(self.get_server(name)), up_file)
+        request_url = 'http://{:s}/upload'.format(self.get_server(servername))
+        if not chapter == '':
+            request_url += '?chapter={:s}'.format(chapter)
+        request = Request(request_url, up_file)
         request.add_header('Content-Type', 'application/octet-stream')
         request.add_header('X-Worknote-Workdir', workdir)
         request.add_header('X-Worknote-Overwrite', str(overwrite))
@@ -105,20 +108,20 @@ class worknoteBookClient(object):
             msg = re.match('Fail (.*)', response)
             print 'ERROR: Upload failed {:s}'.format(msg.group(1))
             
-    def add_server(self, name, url, port):
-        if name == 'client_defaults':
+    def add_server(self, servername, url, port):
+        if servername == 'client_defaults':
             print 'ERROR: Server name not allowed.'
             return
-        self.config[[name, 'url']] = url
-        self.config[[name, 'port']] = port
+        self.config[[servername, 'url']] = url
+        self.config[[servername, 'port']] = port
         self.config.update_cfg_file()
     
-    def set_default_server(self, name):
-        if name == 'client_defaults':
+    def set_default_server(self, servername):
+        if servername == 'client_defaults':
             print 'ERROR: Server name not allowed.'
             return
-        if not name in self.config.get_sections():
+        if not servername in self.config.get_sections():
             print 'ERROR: Server name not configured.'
             return
-        self.config[['client_defaults', 'server']] = name
+        self.config[['client_defaults', 'server']] = servername
         self.config.update_cfg_file()

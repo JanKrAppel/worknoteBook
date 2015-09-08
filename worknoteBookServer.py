@@ -54,6 +54,7 @@ class worknoteBookServer(object):
         self.chapter_list = []
         chapters = self.config.get_sections()
         chapters.remove('server')
+        print chapters
         for chapter in chapters:
             chapter_dir = self.__getabsdir(self.config[[chapter, 'chapter_dir']])
             link_name = chapter.replace(' ', '_')
@@ -88,8 +89,8 @@ class worknoteBookServer(object):
         for wn_workdir in [name for name in listdir(directory)
             if isdir(join(directory, name))
             and exists(join(join(directory, name), 'notedata.worknote'))]:
-                worknotes[wn_workdir] = Worknote(join(self.storagedir, wn_workdir))
-                worknote_list.append([wn_workdir, worknotes[wn_workdir].metadata.metadata['title'], self.worknotes[wn_workdir].metadata.metadata['date']])
+                worknotes[wn_workdir] = Worknote(join(directory, wn_workdir))
+                worknote_list.append([wn_workdir, worknotes[wn_workdir].metadata.metadata['title'], worknotes[wn_workdir].metadata.metadata['date']])
                 worknotes[wn_workdir].build('HTML')
                 worknotes[wn_workdir].build('Beamer')
 
@@ -113,6 +114,7 @@ class worknoteBookServer(object):
 {foot:s}'''
         wn_wrapper = '<li><a href="storage/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="storage/{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
         wn_list = ''
+        index = 0
         for index, entry in enumerate(self.worknote_list):
             wn_workdir, title, date = entry            
             if '\\today' in date:
@@ -202,7 +204,7 @@ class worknoteBookServer(object):
 
     @cherrypy.config(**{'response.timeout': 3600})
     @cherrypy.expose
-    def upload(self):
+    def upload(self, chapter=''):
         from tempfile import gettempdir
         from shutil import copyfileobj, rmtree
         from os.path import join, split, exists
@@ -217,13 +219,19 @@ class worknoteBookServer(object):
             zipfile = ZipFile(dst_file, 'r')
             wn_dir = split(zipfile.namelist()[0])[0]
             zipfile.close()
+        if not chapter == '':
+            storagedir = self.storagedir
+        else:
+            if not chapter in self.chapters:
+                return 'Fail (Chapter {:s} not found)'.format(chapter)
+            storagedir = self.chapters[chapter]['chapter_dir']
         if 'X-Worknote-Overwrite' in cherrypy.request.headers:
             overwrite = cherrypy.request.headers['X-Worknote-Overwrite'] == 'True'
             if  overwrite:
-                if exists(join(self.storagedir, wn_dir)):
-                    rmtree(join(self.storagedir, wn_dir))
+                if exists(join(storagedir, wn_dir)):
+                    rmtree(join(storagedir, wn_dir))
         try:
-            unzip_worknote(dst_file, join(self.storagedir, wn_dir))
+            unzip_worknote(dst_file, join(storagedir, wn_dir))
         except OSError, e:
             return 'Fail (' + str(e) + ')'
         else:

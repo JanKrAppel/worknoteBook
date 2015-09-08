@@ -19,10 +19,11 @@ if __name__ == '__main__':
                                                                        'set_default_server'])
     parser.add_argument('--index', '-i', type=str, default='1', help='Select the index')
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
-    parser.add_argument('--overwrite', '-o', action='store_true', help='Select the working directory')
+    parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite worknote, if present')
     parser.add_argument('--server', '-s', type=str, default='', help='Set the server name')
     parser.add_argument('--url', type=str, default='', help='Set the server URL')
     parser.add_argument('--port', type=int, default=0, help='Set the server port')
+    parser.add_argument('--chapter', type=str, default='', help='Chapter to upload worknote to')
     args = parser.parse_args()
     
     if not exists(expanduser('~/.worknoteBook/storage')):
@@ -52,9 +53,9 @@ if __name__ == '__main__':
         elif args.command == 'download':
             client.download(args.index, args.workdir, server_name)
         elif args.command == 'upload':
-            client.upload(args.workdir, args.overwrite, server_name)
+            client.upload(args.workdir, args.overwrite, server_name, args.chapter)
         elif args.command == 'add_server':
             client.add_server(server_name, args.url, args.port)
-        elif args.command == 'add_server':
+        elif args.command == 'set_default_server':
             client.set_default_server(server_name)
             
