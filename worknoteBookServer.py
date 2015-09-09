@@ -18,6 +18,10 @@ class worknoteBookServer(object):
         return abspath(expandvars(expanduser(dirname)))
         
     def __init__(self, config):
+        from whoosh.index import create_in
+        from whoosh.fields import *
+        from os.path import exists, join
+        from os import makedirs
         self.config = config
         self.storagedir = self.__getabsdir(self.config[['server', 'storagedir']])
         self.head = '''<!doctype html>
@@ -29,6 +33,10 @@ class worknoteBookServer(object):
     <body style="font-family: sans-serif">'''
         self.foot = '''    </body>
 </html>'''
+        schema = Schema(title=TEXT(stored=True), path=ID(stored=True), content=TEXT(stored=True))
+        if not exists(join(self.storagedir, 'index')):
+            makedirs(join(self.storagedir, 'index'))
+        self.index = create_in(join(self.storagedir, 'index'), schema)
         self.__load_chapters()
         self.reload_worknotes()
         self.storagedir_locked = False
@@ -72,17 +80,19 @@ class worknoteBookServer(object):
         self.worknote_list = []
         self.__build_worknote_list(self.storagedir,
                                    self.worknote_list,
-                                   self.worknotes)
+                                   self.worknotes,
+                                   self.index.writer())
         for chapter in self.chapters:
             self.__build_worknote_list(self.chapters[chapter]['chapter_dir'],
                                        self.chapters[chapter]['worknote_list'],
-                                       self.chapters[chapter]['worknotes'])
+                                       self.chapters[chapter]['worknotes'],
+                                       self.index.writer())
         self.storagedir_locked = False
         head = self.head.format(metadata='<meta http-equiv="refresh" content="5; url=./">')
         foot = self.foot.format()
         return '{head:s}<p>Rebuilding worknote list, redirecting in 5 seconds...</p>{foot:s}'.format(head=head, foot=foot)
         
-    def __build_worknote_list(self, directory, worknote_list, worknotes):
+    def __build_worknote_list(self, directory, worknote_list, worknotes, index_writer):
         from worknote import Worknote
         from os.path import isdir, join, exists
         from os import listdir
@@ -90,9 +100,13 @@ class worknoteBookServer(object):
             if isdir(join(directory, name))
             and exists(join(join(directory, name), 'notedata.worknote'))]:
                 worknotes[wn_workdir] = Worknote(join(directory, wn_workdir))
+                title = worknotes[wn_workdir].metadata.metadata['title']
+                path = join(directory, wn_workdir)
                 worknote_list.append([wn_workdir, worknotes[wn_workdir].metadata.metadata['title'], worknotes[wn_workdir].metadata.metadata['date']])
                 worknotes[wn_workdir].build('HTML')
                 worknotes[wn_workdir].build('Beamer')
+                index_writer.add_document(title=title, path=path, content=worknotes[wn_workdir].get_text('Markdown'))
+        index_writer.commit()
 
     @cherrypy.expose
     def index(self):
@@ -237,3 +251,12 @@ class worknoteBookServer(object):
         else:
             self.reload_worknotes()
             return 'Success'
+    
+    @cherrypy.expose            
+    def search(self, string=''):
+        from whoosh.qparser import QueryParser
+        parser = QueryParser("content", self.index.schema)
+        query = parser.parse(string)
+        with self.index.searcher() as searcher:
+            res = searcher.search(query)
+        return res
