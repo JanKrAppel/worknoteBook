@@ -16,7 +16,8 @@ if __name__ == '__main__':
                                                                        'download',
                                                                        'upload',
                                                                        'add_server',
-                                                                       'set_default_server'])
+                                                                       'set_default_server',
+                                                                       'search'])
     parser.add_argument('--index', '-i', type=str, default='1', help='Select the index')
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite worknote, if present')
@@ -24,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--url', type=str, default='', help='Set the server URL')
     parser.add_argument('--port', type=int, default=0, help='Set the server port')
     parser.add_argument('--chapter', type=str, default='', help='Chapter to upload worknote to')
+    parser.add_argument('--query', '-q', type=str, default='', help='String to search for')
     args = parser.parse_args()
     
     if not exists(expanduser('~/.worknoteBook/storage')):
@@ -36,6 +38,8 @@ if __name__ == '__main__':
                                   'url': '0.0.0.0',
                                   'port': 8080}}
         server_cfg = Configuration(expanduser('~/.worknoteBook/server.cfg'), default_cfg)
+        if not exists(expanduser('~/.worknoteBook/server.cfg')):
+            server_cfg.update_cfg_file()
         cherrypy.quickstart(worknoteBookServer(server_cfg))
     else:
         from worknoteBookClient import worknoteBookClient
@@ -44,6 +48,8 @@ if __name__ == '__main__':
                        'localhost': {'url': '127.0.0.1',
                                      'port': 8080}}
         client_cfg = Configuration(expanduser('~/.worknoteBook/client.cfg'), default_cfg)
+        if not exists(expanduser('~/.worknoteBook/client.cfg')):
+            client_cfg.update_cfg_file()
         client = worknoteBookClient(client_cfg)
         server_name = args.server
         if server_name == '':
@@ -58,4 +64,6 @@ if __name__ == '__main__':
             client.add_server(server_name, args.url, args.port)
         elif args.command == 'set_default_server':
             client.set_default_server(server_name)
-            
+        elif args.command == 'search':
+            client.search(args.query, server_name)
+

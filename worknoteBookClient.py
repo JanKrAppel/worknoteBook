@@ -47,6 +47,22 @@ class worknoteBookClient(object):
         for entry in wn_list:
             print entry
     
+    def search(self, query, servername=None):
+        import json
+        from urllib2 import urlopen, URLError, HTTPError
+        try:
+            query = query.replace(' ', '+')
+            res = urlopen('http://' + self.get_server(servername) + '/search_notes?query=' + query)
+            wn_list = json.loads(res.read())
+        except URLError, e:
+            print 'ERROR: Download failed ({:s})'.format(str(e))
+            return
+        except HTTPError, e:
+            print 'ERROR: Download failed ({:s})'.format(str(e))
+            return
+        for entry in wn_list:
+            print entry['index'], entry['title']
+
     def download(self, index, workdir, servername=None):
         from worknoteBookHelpers import unzip_worknote
         from urllib2 import urlopen, URLError
@@ -59,7 +75,8 @@ class worknoteBookClient(object):
         elif len(index) == 2:
             index = '{:d}:{:d}'.format(index[0], index[1])
         tmpfn = join(gettempdir(), 'worknoteBook_download.zip')
-        server_url = 'http://{server:s}/download?index={index:s}'.format(server = self.get_server(servername), index = index)
+        server_url = 'http://{server:s}/download?index={index:s}'.format(server = self.get_server(servername), 
+                                                                         index = index)
         try:        
             server = urlopen(server_url)
             with open(tmpfn, 'wb') as tmpfile:

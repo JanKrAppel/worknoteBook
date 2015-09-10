@@ -4,7 +4,6 @@ Created on Fri Aug 28 23:18:40 2015
 
 @author: appel
 """
-
 import cherrypy
 
 class StaticDir(object):
@@ -37,17 +36,23 @@ class worknoteBookServer(object):
         <meta charset="utf-8"> 
         {metadata:s}
     </head>
-    <body style="font-family: sans-serif">'''
+    <body style="font-family:sans-serif;background:#dddddd">'''
         self.foot = '''    </body>
 </html>'''
-        schema = Schema(title=TEXT(stored=True), path=ID(stored=True), content=TEXT(stored=True))
-        if not exists(join(self.storagedir, 'index')):
-            makedirs(join(self.storagedir, 'index'))
-        self.index = create_in(join(self.storagedir, 'index'), schema)
+        print 'Defining search index...'
+        schema = Schema(index=ID(stored=True),
+                        title=TEXT(stored=True),
+                        link=STORED,
+                        content=TEXT)
+        if not exists(join(self.storagedir, '.search_index')):
+            makedirs(join(self.storagedir, '.search_index'))
+        self.search_index = create_in(join(self.storagedir, '.search_index'), schema)
         print 'Loading chapters...'
         self.__load_chapters()
         print 'Reloading worknotes...'
         self.reload_worknotes()
+        print 'Building search index...'
+        self.__build_search_index()
         print 'Updating CherryPy config...'
         self.__update_config()
     
@@ -100,21 +105,19 @@ class worknoteBookServer(object):
         print 'Processing default storage directory...'
         self.__build_worknote_list(self.storagedir,
                                    self.worknote_list,
-                                   self.worknotes,
-                                   self.index.writer())
-        for chapter in self.chapters:
+                                   self.worknotes)
+        for chapter in self.chapter_list:
             print 'Processing chapter "{:s}"...'.format(chapter)
             self.__build_worknote_list(self.chapters[chapter]['chapter_dir'],
                                        self.chapters[chapter]['worknote_list'],
-                                       self.chapters[chapter]['worknotes'],
-                                       self.index.writer())
+                                       self.chapters[chapter]['worknotes'])
         print 'Unlocking storage dir...'
         self.storagedir_locked = False
         head = self.head.format(metadata='<meta http-equiv="refresh" content="5; url=./">')
         foot = self.foot.format()
         return '{head:s}<p>Rebuilding worknote list, redirecting in 5 seconds...</p>{foot:s}'.format(head=head, foot=foot)
         
-    def __build_worknote_list(self, directory, worknote_list, worknotes, index_writer):
+    def __build_worknote_list(self, directory, worknote_list, worknotes):
         from worknote import Worknote
         from os.path import isdir, join, exists
         from os import listdir
@@ -126,25 +129,54 @@ class worknoteBookServer(object):
                 worknotes[wn_workdir] = Worknote(join(directory, wn_workdir))
                 title = worknotes[wn_workdir].metadata.metadata['title']
                 path = join(directory, wn_workdir)
-                worknote_list.append([wn_workdir, worknotes[wn_workdir].metadata.metadata['title'], worknotes[wn_workdir].metadata.metadata['date']])
+                worknote_list.append([wn_workdir, 
+                                      worknotes[wn_workdir].metadata.metadata['title'],
+                                      worknotes[wn_workdir].metadata.metadata['date']])
                 print '\tTitle:', worknotes[wn_workdir].metadata.metadata['title']
                 print '\tBuilding HTML...'
                 worknotes[wn_workdir].build('HTML')
                 print '\tBuilding Beamer PDF...'
                 worknotes[wn_workdir].build('Beamer')
-                index_writer.add_document(title=title, path=path, content=worknotes[wn_workdir].get_text('Markdown'))
-        index_writer.commit()
+                
+    def __build_search_index(self):
+        print_enter('__build_search_index')
+        from os.path import join
+        from worknoteBookHelpers import gen_index
+        writer = self.search_index.writer()
+        print 'Processing default storage directory...'
+        for index, wn in enumerate(self.worknote_list):
+            wn_workdir, title, date = wn
+            link = u'./storage/{:s}'.format(wn_workdir)
+            writer.add_document(index = gen_index(index + 1),
+                                title = title,
+                                link = link,
+                                content = self.worknotes[wn_workdir].get_text('Markdown'))
+        print 'Processing chapters...'
+        for chapter_index, chapter in enumerate(self.chapter_list):
+            for wn_index, wn in enumerate(self.chapters[chapter]['worknote_list']):
+                wn_workdir, title, date = wn
+                link = u'./{:s}/{:s}'.format(chapter, wn_workdir)
+                writer.add_document(index = gen_index([chapter_index + len(self.worknote_list) + 1,
+                                                       wn_index + 1]),
+                                    title = title,
+                                    link = link,
+                                    content = self.chapters[chapter]['worknotes'][wn_dir].get_text('Markdown'))
+        writer.commit()
 
     @cherrypy.expose
     def index(self):
         print_enter('index')
-        head = self.head.format(metadata='<title>Workbook</title>\n')
+        head = self.head.format(metadata='<title>worknoteBook</title>\n')
         foot = self.foot.format()
         if self.storagedir_locked:
             return head + 'The server is currently busy, please reload the site in a bit...' + foot
         frame = '''{head:s}
     <header>
-        <p><a href="./reload_worknotes">Reload worknotes</a></p>
+        <p><form method="get" action="search">
+               <input type="text" name="query" />
+               <button type="submit">Search</button>
+           </form>
+           <a href="./reload_worknotes">Reload worknotes</a></p>
     </header>
     <main>
         <article>
@@ -154,7 +186,7 @@ class worknoteBookServer(object):
         </article>
     </main>
 {foot:s}'''
-        wn_wrapper = '<li><a href="storage/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="storage/{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
+        wn_wrapper = '<li><a href="{storagedir:s}/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="{storagedir:s}/{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
         print 'Building worknote list...'
         wn_list = ''
         index = 0
@@ -171,8 +203,9 @@ class worknoteBookServer(object):
             wn_list += wn_wrapper.format(wn_dir=wn_workdir,
                                          wn_title=title,
                                          wn_date=date,
-                                         dl_link='./download?index={index:d}'.format(index=index+1)) 
-        for chapter in self.chapters:
+                                         dl_link='./download?index={index:d}'.format(index=index+1),
+                                         storagedir = './storage') 
+        for chapter in self.chapter_list:
             print 'Chapter:', chapter
             wn_list += '<li><b>{:s}</b></br></li>\n'.format(chapter)
             wn_list += '<ol>\n'
@@ -189,7 +222,9 @@ class worknoteBookServer(object):
                 wn_list += wn_wrapper.format(wn_dir=wn_workdir,
                                              wn_title=title,
                                              wn_date=date,
-                                             dl_link='./download?index={index:d}:{subindex:d}'.format(index=index+1, subindex=subindex+1)) 
+                                             dl_link='./download?index={index:d}:{subindex:d}'.format(index=index+1, 
+                                                                                                      subindex=subindex+1),
+                                             storagedir='./{:s}'.format(chapter))
             wn_list += '</ol>\n'
         return frame.format(head=head, foot=foot, wn_list=wn_list)
         
@@ -305,12 +340,55 @@ class worknoteBookServer(object):
             self.reload_worknotes()
             print 'Upload done'
             return 'Success'
-    
-    @cherrypy.expose            
-    def search(self, string=''):
+
+    @cherrypy.expose
+    def search_notes(self, query=''):
+        print_enter('search_notes')
         from whoosh.qparser import QueryParser
-        parser = QueryParser("content", self.index.schema)
-        query = parser.parse(string)
-        with self.index.searcher() as searcher:
-            res = searcher.search(query)
-        return res
+        import json
+        print 'Buidling parser...'
+        parser = QueryParser("content", self.search_index.schema)
+        print 'Building query...'
+        query = parser.parse(unicode(query))
+        print 'Searching...'
+        res = []
+        with self.search_index.searcher() as searcher:
+            results = searcher.search(query)
+            print 'Found {:d} results'.format(len(results))
+            for result in results:
+                res_entry = {}
+                for entry in result:
+                    res_entry[entry] = result[entry]
+                res.append(res_entry)
+        return json.dumps(res)
+        
+    @cherrypy.expose            
+    def search(self, query=''):
+        print_enter('search')
+        import json
+        print 'Performing query...'
+        res = json.loads(self.search_notes(query))
+        print 'Got {:d} results'.format(len(res))
+        head = self.head.format(metadata='<title>worknoteBook - Search results</title>\n')
+        foot = self.foot.format()
+        frame = '''{head:s}
+    <main>
+        <header>
+            <b>Search results for "{searchstring:s}"</b>
+        </header>
+        <article>
+        <ul>
+        {link_list:s}
+        </ul>
+        </article>
+    </main>
+{foot:s}'''
+        link_wrapper = '<li>{index:s} <a href="{link:s}/Report.html">{title:s}</a> <a href="./download?index={index:s}">Download</a> <a href="{link:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
+        print 'Building link list...'
+        link_list = ''
+        for result in res:
+            link_list += link_wrapper.format(index=result[u'index'],
+                                             title=result[u'title'],
+                                             link=result[u'link'])
+        return frame.format(searchstring=query, head=head, foot=foot, link_list=link_list)
+            

@@ -8,7 +8,13 @@ Created on Wed Sep  2 18:06:23 2015
 def parse_index(index):
     from worknote.items import parse_index
     return parse_index(index)[0:2]
-
+    
+def gen_index(index):
+    try:
+        return u':'.join([str(i) for i in index[0:2]])
+    except TypeError:
+        return unicode(index)
+    
 def zip_worknote(src_dir, target_fn):
     from os.path import split, join
     from os import listdir
