@@ -17,14 +17,15 @@ if __name__ == '__main__':
                                                                        'upload',
                                                                        'add_server',
                                                                        'set_default_server',
-                                                                       'search'])
+                                                                       'search',
+                                                                       'delete'])
     parser.add_argument('--index', '-i', type=str, default='1', help='Select the index')
     parser.add_argument('--workdir', '-w', type=str, default=None, help='Select the working directory')
     parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite worknote, if present')
     parser.add_argument('--server', '-s', type=str, default='', help='Set the server name')
     parser.add_argument('--url', type=str, default='', help='Set the server URL')
     parser.add_argument('--port', type=int, default=0, help='Set the server port')
-    parser.add_argument('--chapter', type=str, default='', help='Chapter to upload worknote to')
+    parser.add_argument('--chapter', '-c', type=str, default='', help='Chapter to upload worknote to')
     parser.add_argument('--query', '-q', type=str, default='', help='String to search for')
     args = parser.parse_args()
     
@@ -66,4 +67,6 @@ if __name__ == '__main__':
             client.set_default_server(server_name)
         elif args.command == 'search':
             client.search(args.query, server_name)
+        elif args.command == 'delete':
+            client.delete(args.index, server_name)
 

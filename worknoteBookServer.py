@@ -25,23 +25,28 @@ class worknoteBookServer(object):
         print_enter('__init__')
         from whoosh.index import create_in
         from whoosh.fields import *
-        from os.path import exists, join
+        from os.path import exists, join, split
         from os import makedirs
+        import worknoteBookHelpers
         self.config = config
         self.storagedir = self.__getabsdir(self.config[['server', 'storagedir']])
         print 'Storagedir is "{:s}"'.format(self.storagedir)
+        self.staticdir = join(split(worknoteBookHelpers.__file__)[0], 'static')
+        print 'HTML static dir is "{:s}"'.format(self.staticdir)
         self.head = '''<!doctype html>
 <html>
     <head>
-        <meta charset="utf-8"> 
+        <meta charset="utf-8">
+        <link rel="stylesheet" type="text/css" href="static/index.css">
         {metadata:s}
     </head>
-    <body style="font-family:sans-serif;background:#dddddd">'''
+    <body>'''
         self.foot = '''    </body>
 </html>'''
         print 'Defining search index...'
         schema = Schema(index=ID(stored=True),
                         title=TEXT(stored=True),
+                        date=TEXT(stored=True),
                         link=STORED,
                         content=TEXT)
         if not exists(join(self.storagedir, '.search_index')):
@@ -51,8 +56,6 @@ class worknoteBookServer(object):
         self.__load_chapters()
         print 'Reloading worknotes...'
         self.reload_worknotes()
-        print 'Building search index...'
-        self.__build_search_index()
         print 'Updating CherryPy config...'
         self.__update_config()
     
@@ -67,6 +70,12 @@ class worknoteBookServer(object):
         cherrypy.tree.mount(StaticDir(), '/storage', config = {'/': {
                     'tools.staticdir.on': True,
                     'tools.staticdir.root': self.storagedir,
+                    'tools.staticdir.dir': '.'
+                }})
+        print 'Mounting "{:s}" to /static ...'.format(self.staticdir)
+        cherrypy.tree.mount(StaticDir(), '/static', config = {'/': {
+                    'tools.staticdir.on': True,
+                    'tools.staticdir.root': self.staticdir,
                     'tools.staticdir.dir': '.'
                 }})
         for chapter in self.chapters:
@@ -111,6 +120,7 @@ class worknoteBookServer(object):
             self.__build_worknote_list(self.chapters[chapter]['chapter_dir'],
                                        self.chapters[chapter]['worknote_list'],
                                        self.chapters[chapter]['worknotes'])
+        self.__build_search_index()
         print 'Unlocking storage dir...'
         self.storagedir_locked = False
         head = self.head.format(metadata='<meta http-equiv="refresh" content="5; url=./">')
@@ -150,6 +160,7 @@ class worknoteBookServer(object):
             writer.add_document(index = gen_index(index + 1),
                                 title = title,
                                 link = link,
+                                date = date,
                                 content = self.worknotes[wn_workdir].get_text('Markdown'))
         print 'Processing chapters...'
         for chapter_index, chapter in enumerate(self.chapter_list):
@@ -160,7 +171,8 @@ class worknoteBookServer(object):
                                                        wn_index + 1]),
                                     title = title,
                                     link = link,
-                                    content = self.chapters[chapter]['worknotes'][wn_dir].get_text('Markdown'))
+                                    date = date,
+                                    content = self.chapters[chapter]['worknotes'][wn_workdir].get_text('Markdown'))
         writer.commit()
 
     @cherrypy.expose
@@ -172,11 +184,13 @@ class worknoteBookServer(object):
             return head + 'The server is currently busy, please reload the site in a bit...' + foot
         frame = '''{head:s}
     <header>
-        <p><form method="get" action="search">
-               <input type="text" name="query" />
-               <button type="submit">Search</button>
-           </form>
-           <a href="./reload_worknotes">Reload worknotes</a></p>
+        <p>
+            <form method="get" action="search">
+                   <input type="text" name="query" />
+                   <button type="submit">Search</button>
+            </form>
+            <a href="./reload_worknotes"><img src="static/reload.png" alt="">Reload worknotes</a>
+        </p>
     </header>
     <main>
         <article>
@@ -186,7 +200,7 @@ class worknoteBookServer(object):
         </article>
     </main>
 {foot:s}'''
-        wn_wrapper = '<li><a href="{storagedir:s}/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}">Download</a> <a href="{storagedir:s}/{wn_dir:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
+        wn_wrapper = '<li><a href="{storagedir:s}/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}" title="Download"><img src="static/download.png" alt="Download"></a> <a href="{storagedir:s}/{wn_dir:s}/Beamer.pdf" target="_blank" title="Download PDF"><img src="static/pdf.png" alt="Download PDF"></a> <a href="{rm_link:s}" title="Delete"><img src="static/delete.png" alt="Delete"></a></li>\n'
         print 'Building worknote list...'
         wn_list = ''
         index = 0
@@ -205,6 +219,7 @@ class worknoteBookServer(object):
                                          wn_title=title,
                                          wn_date=date,
                                          dl_link='./download?index={index:d}'.format(index=index+1),
+                                         rm_link='./delete?index={index:d}'.format(index=index+1),
                                          storagedir = './storage') 
         for chapter in self.chapter_list:
             print 'Chapter:', chapter
@@ -217,7 +232,7 @@ class worknoteBookServer(object):
                 if '\\today' in date:
                     from datetime import datetime
                     from os.path import getmtime, join
-                    time = datetime.fromtimestamp(getmtime(join(join(self.chapters[wn_workdir]['chapter_dir'], wn_workdir), 'notedata.worknote')))
+                    time = datetime.fromtimestamp(getmtime(join(join(self.chapters[chapter]['chapter_dir'], wn_workdir), 'notedata.worknote')))
                     date = '{day:d}.{month:d}. {year:d}'.format(day=time.day,
                                                                 month=time.month,
                                                                 year=time.year)
@@ -226,7 +241,9 @@ class worknoteBookServer(object):
                                              wn_date=date,
                                              dl_link='./download?index={index:d}:{subindex:d}'.format(index=index+1, 
                                                                                                       subindex=subindex+1),
-                                             storagedir='./{:s}'.format(chapter))
+                                             rm_link='./delete?index={index:d}:{subindex:d}'.format(index=index+1, 
+                                                                                                    subindex=subindex+1),
+                                             storagedir='./{:s}'.format(self.chapters[chapter]['link_name']))
             wn_list += '</ol>\n'
         return frame.format(head=head, foot=foot, wn_list=wn_list)
         
@@ -274,6 +291,49 @@ class worknoteBookServer(object):
                     res.append(str(index + chapter_index + len(self.worknote_list) + 1) + ':' + str(subindex + 1) + ' ' + wn[1])
             return json.dumps(res)
             
+    @cherrypy.expose
+    def delete(self, index):
+        print_enter('delete')
+        from worknoteBookHelpers import parse_index
+        from shutil import rmtree
+        from os.path import join
+        print 'Index:', index
+        try:
+            index = parse_index(index)
+            if len(index) == 1:
+                index = [index[0] - 1]
+            elif len(index) == 2:
+                index = [index[0] - 1, index[1] - 1]
+            else:
+                raise ValueError('Too many indices')
+        except ValueError, e:
+            return str(e)
+        print 'Parsed index:', index
+        if len(index) == 1:
+            index = index[0]
+            if index < 0 or index > len(self.worknote_list) - 1:
+                return 'Index out of range'
+            wn_workdir, title, date = self.worknote_list[index]
+            print 'Removing "{:s}" from storage directory...'.format(wn_workdir)
+            rmtree(join(self.storagedir, wn_workdir))
+            self.worknote_list.pop(index)
+            self.worknotes.pop(wn_workdir)
+        elif len(index) == 2:
+            chapter_index, index = index
+            chapter_index -= len(self.worknote_list)
+            if chapter_index < 0 or chapter_index > len(self.chapter_list) - 1:
+                return 'Index out of range'
+            chapter = self.chapter_list[chapter_index]
+            if index < 0 or index > len(self.chapters[chapter]['worknote_list']) - 1:
+                return 'Index out of range'
+            wn_workdir, title, date = self.chapters[chapter]['worknote_list'][index]
+            print 'Removing "{:s}" from "{:s}"...'.format(wn_workdir, self.chapters[chapter]['chapter_dir'])
+            rmtree(join(self.chapters[chapter]['chapter_dir'], wn_workdir))
+            self.chapters[chapter]['worknote_list'].pop(index)
+            self.chapters[chapter]['worknotes'].pop(wn_workdir)
+        self.reload_worknotes()
+        return 'Success'
+
     def __serve_wn(self, wn, storagedir):
         print_enter('__serve_wn')
         from tempfile import gettempdir
@@ -385,12 +445,13 @@ class worknoteBookServer(object):
         </article>
     </main>
 {foot:s}'''
-        link_wrapper = '<li>{index:s} <a href="{link:s}/Report.html">{title:s}</a> <a href="./download?index={index:s}">Download</a> <a href="{link:s}/Beamer.pdf" target="_blank">Download PDF</a></li>\n'
+        link_wrapper = '<li><b>{index:s}</b> <a href="{link:s}/Report.html">{title:s}</a> <a href="./download?index={index:s}" title="Download"><img src="static/download.png" alt="Download"></a> <a href="{link:s}/Beamer.pdf" target="_blank" title="Download PDF"><img src="static/pdf.png" alt="Download PDF"></a> <a href="./delete?index={index:s}" title="Delete"><img src="static/delete.png" alt="Delete"></a></li>\n'
         print 'Building link list...'
         link_list = ''
         for result in res:
             link_list += link_wrapper.format(index=result[u'index'],
                                              title=result[u'title'],
-                                             link=result[u'link'])
+                                             link=result[u'link'],
+                                             date=result[u'date'])
         return frame.format(searchstring=query, head=head, foot=foot, link_list=link_list)
             

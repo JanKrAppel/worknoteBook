@@ -92,6 +92,22 @@ class worknoteBookClient(object):
             with open(tmpfn, 'r') as errfile:
                 print 'ERROR: Not a zip file ({:s})'.format(errfile.read())
             
+    def delete(self, index, servername=None):
+        from urllib2 import urlopen, URLError
+        from worknoteBookHelpers import parse_index
+        index = parse_index(index)[0:2]
+        if len(index) == 1:
+            index = '{:d}'.format(index[0])
+        elif len(index) == 2:
+            index = '{:d}:{:d}'.format(index[0], index[1])
+        server_url = 'http://{server:s}/delete?index={index:s}'.format(server = self.get_server(servername), 
+                                                                       index = index)
+        try:
+            server = urlopen(server_url)
+            response = server.read()
+        except URLError, e:
+            print 'ERROR: Delete failed ({:s})'.format(str(e))
+
     def upload(self, workdir, overwrite=False, servername=None, chapter=''):
         from urllib2 import Request, urlopen, HTTPError, URLError
         from worknoteBookHelpers import zip_worknote
@@ -106,7 +122,7 @@ class worknoteBookClient(object):
         up_file = FileLenIO(zip_fn, 'rb')
         request_url = 'http://{:s}/upload'.format(self.get_server(servername))
         if not chapter == '':
-            request_url += '?chapter={:s}'.format(chapter)
+            request_url += '?chapter={:s}'.format(chapter.replace(' ', '+'))
         request = Request(request_url, up_file)
         request.add_header('Content-Type', 'application/octet-stream')
         request.add_header('X-Worknote-Workdir', workdir)
