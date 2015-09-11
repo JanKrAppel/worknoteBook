@@ -46,6 +46,8 @@ class worknoteBookServer(object):
         if not exists(self.storagedir):
             makedirs(self.storagedir)
         self.staticdir = join(split(worknoteBookHelpers.__file__)[0], 'static')
+        self.worknote_list = []
+        self.worknotes = {}
         print 'HTML static dir is "{:s}"'.format(self.staticdir)
         self.head = '''<!doctype html>
 <html>
@@ -123,23 +125,25 @@ class worknoteBookServer(object):
         print_enter('reload_worknotes')
         print 'Locking storage dir...'
         self.storagedir_locked = True
-        self.worknotes = {}
-        self.worknote_list = []
         print 'Processing default storage directory...'
+        self.worknote_list = []
+        self.worknotes = {}
         self.__build_worknote_list(self.storagedir,
                                    self.worknote_list,
                                    self.worknotes)
         for chapter in self.chapter_list:
             print 'Processing chapter "{:s}"...'.format(chapter)
+            self.chapters[chapter]['worknote_list'] = []
+            self.chapters[chapter]['worknotes'] = {}
             self.__build_worknote_list(self.chapters[chapter]['chapter_dir'],
                                        self.chapters[chapter]['worknote_list'],
                                        self.chapters[chapter]['worknotes'])
         self.__build_search_index()
         print 'Unlocking storage dir...'
         self.storagedir_locked = False
-        head = self.head.format(metadata='<meta http-equiv="refresh" content="5; url=./">')
+        head = self.head.format(metadata='<meta http-equiv="refresh" content="3; url=./">')
         foot = self.foot.format()
-        return '{head:s}<p>Rebuilding worknote list, redirecting in 5 seconds...</p>{foot:s}'.format(head=head, foot=foot)
+        return '{head:s}<p>Rebuilding worknote list, redirecting in 3 seconds...</p>{foot:s}'.format(head=head, foot=foot)
         
     def __build_worknote_list(self, directory, worknote_list, worknotes):
         from worknote import Worknote
