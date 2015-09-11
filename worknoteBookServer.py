@@ -170,6 +170,9 @@ class worknoteBookServer(object):
         print_enter('__build_search_index')
         from os.path import join
         from worknoteBookHelpers import gen_index
+        from whoosh.index import create_in
+        self.search_index = create_in(join(self.storagedir, '.search_index'),
+                                      self.search_index.schema)
         writer = self.search_index.writer()
         print 'Processing default storage directory...'
         for index, wn in enumerate(self.worknote_list):
