@@ -196,10 +196,11 @@ class worknoteBookServer(object):
             print 'Worknote:', wn_workdir
             if '\\today' in date:
                 from datetime import datetime
-                now = datetime.now()
-                date = '{day:d}.{month:d}. {year:d}'.format(day=now.day,
-                                                            month=now.month,
-                                                            year=now.year)
+                from os.path import getmtime, join
+                time = datetime.fromtimestamp(getmtime(join(join(self.storagedir, wn_workdir), 'notedata.worknote')))
+                date = '{day:d}.{month:d}. {year:d}'.format(day=time.day,
+                                                            month=time.month,
+                                                            year=time.year)
             wn_list += wn_wrapper.format(wn_dir=wn_workdir,
                                          wn_title=title,
                                          wn_date=date,
@@ -215,10 +216,11 @@ class worknoteBookServer(object):
                 print 'Worknote:', wn_workdir
                 if '\\today' in date:
                     from datetime import datetime
-                    now = datetime.now()
-                    date = '{day:d}.{month:d}. {year:d}'.format(day=now.day,
-                                                                month=now.month,
-                                                                year=now.year)
+                    from os.path import getmtime, join
+                    time = datetime.fromtimestamp(getmtime(join(join(self.chapters[wn_workdir]['chapter_dir'], wn_workdir), 'notedata.worknote')))
+                    date = '{day:d}.{month:d}. {year:d}'.format(day=time.day,
+                                                                month=time.month,
+                                                                year=time.year)
                 wn_list += wn_wrapper.format(wn_dir=wn_workdir,
                                              wn_title=title,
                                              wn_date=date,
