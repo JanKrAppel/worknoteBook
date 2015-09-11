@@ -19,7 +19,20 @@ class FileLenIO(FileIO):
 
 class worknoteBookClient(object):
 
-    def __init__(self, config):
+    def __init__(self, config='~/.worknoteBook/client.cfg'):
+        if type(config) == str:
+            from os.path import exists, expanduser, split
+            from os import makedirs
+            from worknoteBookHelpers import Configuration
+            cfg_file = config
+            if not exists(split(expanduser(cfg_file))[0]):
+                makedirs(split(expanduser(cfg_file))[0])
+            default_cfg = {'client_defaults': {'server': 'localhost'},
+                           'localhost': {'url': '127.0.0.1',
+                                         'port': 8080}}
+            config = Configuration(expanduser(cfg_file), default_cfg)
+            if not exists(expanduser(cfg_file)):
+                config.update_cfg_file()            
         self.config = config
         self.config.update_cfg_file()
         

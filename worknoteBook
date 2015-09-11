@@ -28,30 +28,13 @@ if __name__ == '__main__':
     parser.add_argument('--chapter', '-c', type=str, default='', help='Chapter to upload worknote to')
     parser.add_argument('--query', '-q', type=str, default='', help='String to search for')
     args = parser.parse_args()
-    
-    if not exists(expanduser('~/.worknoteBook/storage')):
-        makedirs(expanduser('~/.worknoteBook/storage'))
     if args.command == 'server':
         import cherrypy
         from worknoteBookServer import worknoteBookServer
-        from worknoteBookHelpers import Configuration
-        default_cfg = {'server': {'storagedir': '~/.worknoteBook/storage',
-                                  'url': '0.0.0.0',
-                                  'port': 8080}}
-        server_cfg = Configuration(expanduser('~/.worknoteBook/server.cfg'), default_cfg)
-        if not exists(expanduser('~/.worknoteBook/server.cfg')):
-            server_cfg.update_cfg_file()
-        cherrypy.quickstart(worknoteBookServer(server_cfg))
+        cherrypy.quickstart(worknoteBookServer())
     else:
         from worknoteBookClient import worknoteBookClient
-        from worknoteBookHelpers import Configuration
-        default_cfg = {'client_defaults': {'server': 'localhost'},
-                       'localhost': {'url': '127.0.0.1',
-                                     'port': 8080}}
-        client_cfg = Configuration(expanduser('~/.worknoteBook/client.cfg'), default_cfg)
-        if not exists(expanduser('~/.worknoteBook/client.cfg')):
-            client_cfg.update_cfg_file()
-        client = worknoteBookClient(client_cfg)
+        client = worknoteBookClient()
         server_name = args.server
         if server_name == '':
             server_name = None

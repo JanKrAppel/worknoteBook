@@ -21,16 +21,30 @@ class worknoteBookServer(object):
         from os.path import abspath, expanduser, expandvars
         return abspath(expandvars(expanduser(dirname)))
         
-    def __init__(self, config):
+    def __init__(self, config='~/.worknoteBook/server.cfg'):
         print_enter('__init__')
         from whoosh.index import create_in
         from whoosh.fields import *
         from os.path import exists, join, split
         from os import makedirs
         import worknoteBookHelpers
+        if type(config) == str:
+            from os.path import expanduser
+            from worknoteBookHelpers import Configuration
+            cfg_file = config
+            if not exists(split(expanduser(cfg_file))[0]):
+                makedirs(split(expanduser(cfg_file))[0])
+            default_cfg = {'server': {'storagedir': '~/.worknoteBook/storage',
+                                      'url': '0.0.0.0',
+                                      'port': 8080}}
+            config = Configuration(expanduser(cfg_file), default_cfg)
+            if not exists(expanduser(cfg_file)):
+                config.update_cfg_file()
         self.config = config
         self.storagedir = self.__getabsdir(self.config[['server', 'storagedir']])
         print 'Storagedir is "{:s}"'.format(self.storagedir)
+        if not exists(self.storagedir):
+            makedirs(self.storagedir)
         self.staticdir = join(split(worknoteBookHelpers.__file__)[0], 'static')
         print 'HTML static dir is "{:s}"'.format(self.staticdir)
         self.head = '''<!doctype html>
