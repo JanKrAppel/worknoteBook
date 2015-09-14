@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--chapter', '-c', type=str, default='', help='Chapter to upload worknote to')
     parser.add_argument('--query', '-q', type=str, default='', help='String to search for')
     parser.add_argument('--user', type=str, default='', help='Set the username')
-    parser.add_argument('--pass', type=str, default='', help='Set the password')
+    parser.add_argument('--password', type=str, default='', help='Set the password')
     args = parser.parse_args()
     if args.command == 'server':
         import cherrypy
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         elif args.command == 'upload':
             client.upload(args.workdir, args.overwrite, server_name, args.chapter)
         elif args.command == 'add_server':
-            client.add_server(server_name, args.url, args.port, args.user, args.pass)
+            client.add_server(server_name, args.url, args.port, args.user, args.password)
         elif args.command == 'set_default_server':
             client.set_default_server(server_name)
         elif args.command == 'search':
