@@ -36,6 +36,7 @@ class worknoteBookServer(object):
             if not exists(split(expanduser(cfg_file))[0]):
                 makedirs(split(expanduser(cfg_file))[0])
             default_cfg = {'server': {'storagedir': '~/.worknoteBook/storage',
+                                      'user_db': '~/.worknoteBook/users.dat',
                                       'url': '0.0.0.0',
                                       'port': 8080}}
             config = Configuration(expanduser(cfg_file), default_cfg)
