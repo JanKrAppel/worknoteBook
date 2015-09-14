@@ -321,13 +321,13 @@ class worknoteBookServer(object):
             res = []
             print 'Default storage dir...'
             for index, wn in enumerate(self.worknote_list):
-                res.append(str(index + 1) + ' ' + wn[1])
+                res.append(str(index + 1) + ') ' + wn[1])
             index = len(self.worknote_list)
             for chapter_index, chapter in enumerate(self.chapter_list):
                 print 'Chapter "{:s}"...'.format(chapter)
-                res.append(str(index + chapter_index + 1) + ' ' + chapter)
+                res.append('Chapter ' + chapter + ':')
                 for subindex, wn in enumerate(self.chapters[chapter]['worknote_list']):
-                    res.append(str(index + chapter_index + 1) + ':' + str(subindex + 1) + ' ' + wn[1])
+                    res.append(str(index + chapter_index + 1) + ':' + str(subindex + 1) + ') ' + wn[1])
                 index += 1
             print 'Dumping JSON object...'
             return json.dumps(res)
