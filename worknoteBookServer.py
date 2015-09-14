@@ -254,7 +254,6 @@ class worknoteBookServer(object):
             print 'Chapter:', chapter
             wn_list += '<li><b>{:s}</b></br></li>\n'.format(chapter)
             wn_list += '<ol>\n'
-            index += 1
             for subindex, entry in enumerate(self.chapters[chapter]['worknote_list']):
                 wn_workdir, title, date = entry            
                 print 'Worknote:', wn_workdir
@@ -273,6 +272,7 @@ class worknoteBookServer(object):
                                              rm_link='./delete?index={index:d}:{subindex:d}'.format(index=index+1, 
                                                                                                     subindex=subindex+1),
                                              storagedir='./{:s}'.format(self.chapters[chapter]['link_name']))
+            index += 1
             wn_list += '</ol>\n'
         return frame.format(head=head, foot=foot, wn_list=wn_list)
         
@@ -312,18 +312,23 @@ class worknoteBookServer(object):
             print 'No index, returning worknote list...'
             import json
             res = []
+            print 'Default storage dir...'
+            index = 0
             for index, wn in enumerate(self.worknote_list):
                 res.append(str(index + 1) + ' ' + wn[1])
             for chapter_index, chapter in enumerate(self.chapter_list):
+                print 'Chapter "{:s}"...'.format(chapter)
                 res.append(str(index + chapter_index + len(self.worknote_list) + 1) + ' ' + chapter)
                 for subindex, wn in enumerate(self.chapters[chapter]['worknote_list']):
                     res.append(str(index + chapter_index + len(self.worknote_list) + 1) + ':' + str(subindex + 1) + ' ' + wn[1])
+            print 'Dumping JSON object...'
             return json.dumps(res)
             
     @cherrypy.expose
     @require()
     def delete(self, index):
         print_enter('worknoteBookServer.delete')
+        print cherrypy.request.headers
         from worknoteBookHelpers import parse_index
         from shutil import rmtree
         from os.path import join
@@ -390,6 +395,7 @@ class worknoteBookServer(object):
     @require()
     def upload(self, chapter=''):
         print_enter('worknoteBookServer.upload')
+        print cherrypy.request.headers
         from tempfile import gettempdir
         from shutil import copyfileobj, rmtree
         from os.path import join, split, exists
