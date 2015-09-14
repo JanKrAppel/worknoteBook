@@ -237,7 +237,6 @@ class worknoteBookServer(object):
             logininfo = 'Logged in as: {username:s}<a href="auth/logout"><img src="static/logout.png" alt="Log out">Log out</a>'.format(username=self.auth.logged_in)
         print 'Building worknote list...'
         wn_list = ''
-        index = 0
         print 'Default storage dir...'
         for index, entry in enumerate(self.worknote_list):
             wn_workdir, title, date = entry           
@@ -255,15 +254,13 @@ class worknoteBookServer(object):
                                          dl_link='./download?index={index:d}'.format(index=index+1),
                                          rm_link='./delete?index={index:d}'.format(index=index+1),
                                          storagedir = './storage') 
-        print index
+        index = len(self.worknote_list)
         for chapter in self.chapter_list:
             print 'Chapter:', chapter
             wn_list += '<li><b>{:s}</b></br></li>\n'.format(chapter)
             wn_list += '<ol>\n'
-            index += 1 #FIXME: Fix this index shit, probably use len(self.worknote_list)
             print index
             for subindex, entry in enumerate(self.chapters[chapter]['worknote_list']):
-                print index
                 wn_workdir, title, date = entry            
                 print 'Worknote:', wn_workdir
                 if '\\today' in date:
@@ -281,6 +278,7 @@ class worknoteBookServer(object):
                                              rm_link='./delete?index={index:d}:{subindex:d}'.format(index=index+1, 
                                                                                                     subindex=subindex+1),
                                              storagedir='./{:s}'.format(self.chapters[chapter]['link_name']))
+            index += 1
             wn_list += '</ol>\n'
         return frame.format(head=head, foot=foot, wn_list=wn_list, logininfo=logininfo)
         
@@ -321,14 +319,15 @@ class worknoteBookServer(object):
             import json
             res = []
             print 'Default storage dir...'
-            index = 0
             for index, wn in enumerate(self.worknote_list):
                 res.append(str(index + 1) + ' ' + wn[1])
+            index = len(self.worknote_list)
             for chapter_index, chapter in enumerate(self.chapter_list):
                 print 'Chapter "{:s}"...'.format(chapter)
-                res.append(str(index + chapter_index + 2) + ' ' + chapter)
+                res.append(str(index + chapter_index + 1) + ' ' + chapter)
                 for subindex, wn in enumerate(self.chapters[chapter]['worknote_list']):
-                    res.append(str(index + chapter_index + 2) + ':' + str(subindex + 1) + ' ' + wn[1])
+                    res.append(str(index + chapter_index + 1) + ':' + str(subindex + 1) + ' ' + wn[1])
+                index += 1
             print 'Dumping JSON object...'
             return json.dumps(res)
             
