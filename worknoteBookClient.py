@@ -206,12 +206,14 @@ class worknoteBookClient(object):
             msg = re.match('Fail (.*)', response)
             print 'ERROR: Upload failed {:s}'.format(msg.group(1))
             
-    def add_server(self, servername, url, port):
+    def add_server(self, servername, url, port, user, password):
         if servername == 'client_defaults':
             print 'ERROR: Server name not allowed.'
             return
         self.config[[servername, 'url']] = url
         self.config[[servername, 'port']] = port
+        self.config[[servername, 'user']] = user
+        self.config[[servername, 'pass']] = password
         self.config.update_cfg_file()
     
     def set_default_server(self, servername):
