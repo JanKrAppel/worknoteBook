@@ -5,6 +5,7 @@ Created on Fri Aug 28 23:18:40 2015
 @author: appel
 """
 import cherrypy
+from worknoteBookServer_AuthModule import AuthController, require, member_of, name_is
 
 class StaticDir(object):
     def __init__(self):
@@ -22,7 +23,7 @@ class worknoteBookServer(object):
         return abspath(expandvars(expanduser(dirname)))
         
     def __init__(self, config='~/.worknoteBook/server.cfg'):
-        print_enter('__init__')
+        print_enter('worknoteBookServer.__init__')
         from whoosh.index import create_in
         from whoosh.fields import *
         from os.path import exists, join, split
@@ -74,14 +75,20 @@ class worknoteBookServer(object):
         self.__reload_worknotes()
         print 'Updating CherryPy config...'
         self.__update_config()
+        self.auth = AuthController(self.__getabsdir(self.config[['server', 'user_db']]),
+                                   self.head,
+                                   self.foot,
+                                   self.staticdir)
     
     def __update_config(self):
-        print_enter('__update_config')
+        print_enter('worknoteBookServer.__update_config')
         print 'Server parameters:'
         print '\turl: {:s}'.format(self.config[['server', 'url']])
         print '\tport: {:d}'.format(self.config[['server', 'port']])
         cherrypy.config.update({'server.socket_host': self.config[['server', 'url']],
-                                'server.socket_port': self.config[['server', 'port']]})
+                                'server.socket_port': self.config[['server', 'port']],
+                                'tools.sessions.on': True,
+                                'tools.auth.on': True})
         print 'Mounting "{:s}" to /storage ...'.format(self.storagedir)
         cherrypy.tree.mount(StaticDir(), '/storage', config = {'/': {
                     'tools.staticdir.on': True,
@@ -104,7 +111,7 @@ class worknoteBookServer(object):
                                                 }})
                 
     def __load_chapters(self):
-        print_enter('__load_chapters')
+        print_enter('worknoteBookServer.__load_chapters')
         self.chapters = {}
         self.chapter_list = []
         chapters = self.config.get_sections()
@@ -126,7 +133,7 @@ class worknoteBookServer(object):
         raise cherrypy.HTTPRedirect('/')
         
     def __reload_worknotes(self):
-        print_enter('__reload_worknotes')
+        print_enter('worknoteBookServer.__reload_worknotes')
         print 'Locking storage dir...'
         self.storagedir_locked = True
         print 'Processing default storage directory...'
@@ -168,7 +175,7 @@ class worknoteBookServer(object):
                 worknotes[wn_workdir].build('Beamer')
                 
     def __build_search_index(self):
-        print_enter('__build_search_index')
+        print_enter('worknoteBookServer.__build_search_index')
         from os.path import join
         from worknoteBookHelpers import gen_index
         from whoosh.index import create_in
@@ -199,7 +206,7 @@ class worknoteBookServer(object):
 
     @cherrypy.expose
     def index(self):
-        print_enter('index')
+        print_enter('worknoteBookServer.index')
         head = self.head.format(metadata='<title>worknoteBook</title>\n')
         foot = self.foot.format()
         if self.storagedir_locked:
@@ -271,7 +278,7 @@ class worknoteBookServer(object):
         
     @cherrypy.expose
     def download(self, index=None):
-        print_enter('download')
+        print_enter('worknoteBookServer.download')
         if not index is None:
             print 'Index:', index
             from worknoteBookHelpers import parse_index
@@ -314,8 +321,9 @@ class worknoteBookServer(object):
             return json.dumps(res)
             
     @cherrypy.expose
+    @require()
     def delete(self, index):
-        print_enter('delete')
+        print_enter('worknoteBookServer.delete')
         from worknoteBookHelpers import parse_index
         from shutil import rmtree
         from os.path import join
@@ -357,7 +365,7 @@ class worknoteBookServer(object):
         return 'Success'
 
     def __serve_wn(self, wn, storagedir):
-        print_enter('__serve_wn')
+        print_enter('worknoteBookServer.__serve_wn')
         from tempfile import gettempdir
         from os.path import join, exists
         from cherrypy.lib.static import serve_download
@@ -379,8 +387,9 @@ class worknoteBookServer(object):
 
     @cherrypy.config(**{'response.timeout': 3600})
     @cherrypy.expose
+    @require()
     def upload(self, chapter=''):
-        print_enter('upload')
+        print_enter('worknoteBookServer.upload')
         from tempfile import gettempdir
         from shutil import copyfileobj, rmtree
         from os.path import join, split, exists
@@ -427,7 +436,7 @@ class worknoteBookServer(object):
 
     @cherrypy.expose
     def search_notes(self, query=''):
-        print_enter('search_notes')
+        print_enter('worknoteBookServer.search_notes')
         from whoosh.qparser import QueryParser
         import json
         print 'Buidling parser...'
@@ -448,7 +457,7 @@ class worknoteBookServer(object):
         
     @cherrypy.expose            
     def search(self, query=''):
-        print_enter('search')
+        print_enter('worknoteBookServer.search')
         import json
         print 'Performing query...'
         res = json.loads(self.search_notes(query))
