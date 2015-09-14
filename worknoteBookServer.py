@@ -255,11 +255,15 @@ class worknoteBookServer(object):
                                          dl_link='./download?index={index:d}'.format(index=index+1),
                                          rm_link='./delete?index={index:d}'.format(index=index+1),
                                          storagedir = './storage') 
+        print index
         for chapter in self.chapter_list:
             print 'Chapter:', chapter
             wn_list += '<li><b>{:s}</b></br></li>\n'.format(chapter)
             wn_list += '<ol>\n'
+            index += 1 #FIXME: Fix this index shit, probably use len(self.worknote_list)
+            print index
             for subindex, entry in enumerate(self.chapters[chapter]['worknote_list']):
+                print index
                 wn_workdir, title, date = entry            
                 print 'Worknote:', wn_workdir
                 if '\\today' in date:
@@ -277,7 +281,6 @@ class worknoteBookServer(object):
                                              rm_link='./delete?index={index:d}:{subindex:d}'.format(index=index+1, 
                                                                                                     subindex=subindex+1),
                                              storagedir='./{:s}'.format(self.chapters[chapter]['link_name']))
-            index += 1
             wn_list += '</ol>\n'
         return frame.format(head=head, foot=foot, wn_list=wn_list, logininfo=logininfo)
         
