@@ -71,7 +71,7 @@ class worknoteBookServer(object):
         print 'Loading chapters...'
         self.__load_chapters()
         print 'Reloading worknotes...'
-        self.reload_worknotes()
+        self.__reload_worknotes()
         print 'Updating CherryPy config...'
         self.__update_config()
     
@@ -122,7 +122,11 @@ class worknoteBookServer(object):
 
     @cherrypy.expose
     def reload_worknotes(self):
-        print_enter('reload_worknotes')
+        self.__reload_worknotes()
+        raise cherrypy.HTTPRedirect('/')
+        
+    def __reload_worknotes(self):
+        print_enter('__reload_worknotes')
         print 'Locking storage dir...'
         self.storagedir_locked = True
         print 'Processing default storage directory...'
@@ -141,10 +145,7 @@ class worknoteBookServer(object):
         self.__build_search_index()
         print 'Unlocking storage dir...'
         self.storagedir_locked = False
-        head = self.head.format(metadata='<meta http-equiv="refresh" content="3; url=./">')
-        foot = self.foot.format()
-        return '{head:s}<p>Rebuilding worknote list, redirecting in 3 seconds...</p>{foot:s}'.format(head=head, foot=foot)
-        
+
     def __build_worknote_list(self, directory, worknote_list, worknotes):
         from worknote import Worknote
         from os.path import isdir, join, exists
