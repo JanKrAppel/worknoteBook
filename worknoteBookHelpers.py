@@ -111,3 +111,6 @@ class Configuration(object):
             
     def get_sections(self):
         return self.config.sections()
+        
+    def get_options(self, section):
+        return self.config.options(section)

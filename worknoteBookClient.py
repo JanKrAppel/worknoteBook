@@ -106,8 +106,34 @@ class worknoteBookClient(object):
                 print 'ERROR: Not a zip file ({:s})'.format(errfile.read())
             
     def delete(self, index, servername=None):
-        from urllib2 import urlopen, URLError
+        from urllib2 import Request, urlopen, HTTPError, URLError, HTTPCookieProcessor, build_opener, install_opener
+        from base64 import b64encode
         from worknoteBookHelpers import parse_index
+        from cookielib import CookieJar
+        jar = CookieJar()
+        opener = build_opener(HTTPCookieProcessor(jar))
+        install_opener(opener)
+        if servername is None:
+            servername = self.config[['client_defaults', 'server']]
+        if 'user' in self.config.get_options(servername):
+            auth_header = '{:s}:{:s}'.format(self.config[[servername, 'user']],
+                                             self.config[[servername, 'pass']])
+            auth_header = b64encode(auth_header).strip()
+        else:
+            print 'Upload not possible, no login information for this server'
+        request_url = 'http://{:s}/auth/login'.format(self.get_server(servername))
+        request = Request(request_url)
+        request.add_header('Authorization', auth_header)
+        try:        
+            response = urlopen(request)
+            response.read()
+            response.close()
+        except HTTPError, e:
+            print 'ERROR: Delete failed ({:s})'.format(str(e))
+            return
+        except URLError, e:
+            print 'ERROR: Delete failed ({:s})'.format(str(e))
+            return        
         index = parse_index(index)[0:2]
         if len(index) == 1:
             index = '{:d}'.format(index[0])
@@ -122,10 +148,36 @@ class worknoteBookClient(object):
             print 'ERROR: Delete failed ({:s})'.format(str(e))
 
     def upload(self, workdir, overwrite=False, servername=None, chapter=''):
-        from urllib2 import Request, urlopen, HTTPError, URLError
+        from urllib2 import Request, urlopen, HTTPError, URLError, HTTPCookieProcessor, build_opener, install_opener
+        from base64 import b64encode
         from worknoteBookHelpers import zip_worknote
         from tempfile import gettempdir
         from os.path import join, exists
+        from cookielib import CookieJar
+        jar = CookieJar()
+        opener = build_opener(HTTPCookieProcessor(jar))
+        install_opener(opener)
+        if servername is None:
+            servername = self.config[['client_defaults', 'server']]
+        if 'user' in self.config.get_options(servername):
+            auth_header = '{:s}:{:s}'.format(self.config[[servername, 'user']],
+                                             self.config[[servername, 'pass']])
+            auth_header = b64encode(auth_header).strip()
+        else:
+            print 'Upload not possible, no login information for this server'
+        request_url = 'http://{:s}/auth/login'.format(self.get_server(servername))
+        request = Request(request_url)
+        request.add_header('Authorization', auth_header)
+        try:        
+            response = urlopen(request)
+            response.read()
+            response.close()
+        except HTTPError, e:
+            print 'ERROR: Upload failed ({:s})'.format(str(e))
+            return
+        except URLError, e:
+            print 'ERROR: Upload failed ({:s})'.format(str(e))
+            return        
         tmpdir = gettempdir()
         zip_fn = join(tmpdir, 'worknoteBook_upload.zip')
         if not exists(workdir):

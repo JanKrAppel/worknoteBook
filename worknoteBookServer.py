@@ -218,7 +218,8 @@ class worknoteBookServer(object):
                    <input type="text" name="query" />
                    <button type="submit">Search</button>
             </form>
-            <a href="./reload_worknotes"><img src="static/reload.png" alt="">Reload worknotes</a>
+            <p>{logininfo:s}</p>
+            <p><a href="./reload_worknotes"><img src="static/reload.png" alt="">Reload worknotes</a></p>
         </p>
     </header>
     <main>
@@ -230,6 +231,10 @@ class worknoteBookServer(object):
     </main>
 {foot:s}'''
         wn_wrapper = '<li><a href="{storagedir:s}/{wn_dir:s}/Report.html">{wn_title:s}</a> ({wn_date:s}) <a href="{dl_link:s}" title="Download"><img src="static/download.png" alt="Download"></a> <a href="{storagedir:s}/{wn_dir:s}/Beamer.pdf" target="_blank" title="Download PDF"><img src="static/pdf.png" alt="Download PDF"></a> <a href="{rm_link:s}" title="Delete"><img src="static/delete.png" alt="Delete"></a></li>\n'
+        if self.auth.logged_in is None:
+            logininfo = '<a href="auth/login"><img src="static/login.png" alt="Log in">Log in</a>'
+        else:
+            logininfo = 'Logged in as: {username:s}<a href="auth/logout"><img src="static/logout.png" alt="Log out">Log out</a>'.format(username=self.auth.logged_in)
         print 'Building worknote list...'
         wn_list = ''
         index = 0
@@ -274,7 +279,7 @@ class worknoteBookServer(object):
                                              storagedir='./{:s}'.format(self.chapters[chapter]['link_name']))
             index += 1
             wn_list += '</ol>\n'
-        return frame.format(head=head, foot=foot, wn_list=wn_list)
+        return frame.format(head=head, foot=foot, wn_list=wn_list, logininfo=logininfo)
         
     @cherrypy.expose
     def download(self, index=None):
@@ -318,9 +323,9 @@ class worknoteBookServer(object):
                 res.append(str(index + 1) + ' ' + wn[1])
             for chapter_index, chapter in enumerate(self.chapter_list):
                 print 'Chapter "{:s}"...'.format(chapter)
-                res.append(str(index + chapter_index + len(self.worknote_list) + 1) + ' ' + chapter)
+                res.append(str(index + chapter_index + 2) + ' ' + chapter)
                 for subindex, wn in enumerate(self.chapters[chapter]['worknote_list']):
-                    res.append(str(index + chapter_index + len(self.worknote_list) + 1) + ':' + str(subindex + 1) + ' ' + wn[1])
+                    res.append(str(index + chapter_index + 2) + ':' + str(subindex + 1) + ' ' + wn[1])
             print 'Dumping JSON object...'
             return json.dumps(res)
             

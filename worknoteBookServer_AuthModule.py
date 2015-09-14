@@ -44,8 +44,6 @@ def check_credentials(username, password, auth_file_fn):
         else:
             print 'Trying MD5 hash...'
             password = md5.new(password).hexdigest()
-            print password
-            print '"{:s}"'.format(users[username])
             if users[username] == password:
                 print 'User/pass matched'
                 return None
@@ -139,12 +137,15 @@ class AuthController(object):
                     'tools.staticdir.root': self.staticdir,
                     'tools.staticdir.dir': '.'
                 }})
+        self.logged_in = None
     
     def on_login(self, username):
         """Called on successful login"""
+        self.logged_in = username
     
     def on_logout(self, username):
         """Called on logout"""
+        self.logged_in = None
     
     def get_loginform(self, username, msg="Enter login information", from_page="/"):
         print_enter('AuthController.get_loginform')
@@ -164,20 +165,38 @@ class AuthController(object):
     @cherrypy.expose
     def login(self, username=None, password=None, from_page="/"):
         print_enter('AuthController.login')
+        from base64 import b64decode
+        if 'Python-urllib' in cherrypy.request.headers['User-Agent']:
+            print 'CLI client header found'
+            if 'Authorization' in cherrypy.request.headers:
+                print 'Authorization header found, parsing...'
+                auth_header = cherrypy.request.headers['Authorization']
+                auth_header = b64decode(auth_header)
+                username, password = auth_header.split(':')
+            cli_client = True
+        else:
+            cli_client = False
         if username is None or password is None:
-            return self.get_loginform("", from_page=from_page)
+            if not cli_client:
+                return self.get_loginform("", from_page=from_page)
+            else:
+                raise cherrypy.HTTPError("403 Forbidden", "Login needed for this action")
         print 'Username:', username
         print 'Checking credentials...'
         error_msg = check_credentials(username, password, self.auth_file)
         if error_msg:
             print 'Login unsuccessful'
-            return self.get_loginform(username, error_msg, from_page)
+            if not cli_client:
+                return self.get_loginform(username, error_msg, from_page)
+            else:
+                raise cherrypy.HTTPError("403 Forbidden", "Login needed for this action")
         else:
             print 'Login successful'
             cherrypy.session.regenerate()
             cherrypy.session[SESSION_KEY] = cherrypy.request.login = username
             self.on_login(username)
-            raise cherrypy.HTTPRedirect(from_page or "/")
+            if not cli_client:
+                raise cherrypy.HTTPRedirect(from_page or "/")
     
     @cherrypy.expose
     def logout(self, from_page="/"):
