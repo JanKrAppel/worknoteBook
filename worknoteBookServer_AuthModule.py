@@ -154,9 +154,9 @@ class AuthController(object):
         frame = """{head:s}
             <form method="post" action="/auth/login">
             <input type="hidden" name="from_page" value="{from_page:s}" />
-            {msg:s}<br/>
-            Username: <input type="text" name="username" value="{username:s}" /><br />
-            Password: <input type="password" name="password" /><br />
+            <b>{msg:s}</b><br/>
+            Username:&nbsp;<input type="text" name="username" value="{username:s}" /><br />
+            Password:&nbsp;&nbsp;<input type="password" name="password" /><br />
             <input type="submit" value="Log in" />
         {foot:s}"""
         return frame.format(head=head, foot=foot, from_page=from_page, 
