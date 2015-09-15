@@ -1,25 +1,25 @@
-#worknoteBook
+# worknoteBook
 
 worknoteBook is a CherryPy based web server and command-line client intended to store multiple ET/worknote objects. It allows for structured storage in subdirectories called chapters and full-text searching in the notes.
 
 **Although upload and deletion of Worknotes is password protected, this server should in no way be considered secure. The password protection is only to stop ~~colleagues~~ you from deleting your notes. It can probably be trivially broken or circumvented.**
 
-##Installation
+## Installation
 
-###Prerequisites
+### Prerequisites
 
 worknoteBook uses the Worknote class which you'll need to have available in ```$PYTHONPATH```. In addition, it uses the following Python modules:
 
-####Server
+#### Server
 
 - CherryPy
 - Whoosh
 
-####Client
+#### Client
 
 The client should be able to run with only the standard libraries.
 
-##Usage
+## Usage
 
 All functionality can be used by the ```worknoteBook``` command. A list of common operations is:
 
@@ -34,7 +34,8 @@ Some common operations would be:
 ```worknoteBook delete -i <index>``` Delete the worknote at the given index
 
 The full help output is:
-```usage: worknoteBook [-h] [--index INDEX] [--workdir WORKDIR] [--overwrite]
+```
+usage: worknoteBook [-h] [--index INDEX] [--workdir WORKDIR] [--overwrite]
                     [--server SERVER] [--url URL] [--port PORT]
                     [--chapter CHAPTER] [--query QUERY] [--user USER]
                     [--password PASSWORD]
@@ -61,4 +62,5 @@ optional arguments:
   --query QUERY, -q QUERY
                         String to search for
   --user USER           Set the username
-  --password PASSWORD   Set the password```
+  --password PASSWORD   Set the password
+  ```
