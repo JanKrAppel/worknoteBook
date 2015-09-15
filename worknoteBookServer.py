@@ -386,7 +386,7 @@ class worknoteBookServer(object):
         wn_dir, wn_title, wn_date = wn
         print 'Preparing to serve "{:s}" from "{:s}"...'.format(wn_dir, storagedir)
         tmpdir = gettempdir()
-        fn_wnzip = '{wn_title:s}.zip'.format(wn_title=wn_title)
+        fn_wnzip = '{wn_dir:s}.zip'.format(wn_dir=wn_dir)
         dl_filepath = join(tmpdir, fn_wnzip)
         print 'Zipping worknote...'
         zip_worknote(join(storagedir, wn_dir), dl_filepath)
