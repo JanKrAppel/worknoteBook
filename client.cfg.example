@@ -1,0 +1,9 @@
+[client_defaults]
+server = localhost
+
+[localhost]
+url = 127.0.0.1
+port = 8080
+user = user
+pass = 1a1dc91c907325c69271ddf0c944bc72
+

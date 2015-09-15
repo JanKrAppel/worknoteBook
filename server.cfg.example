@@ -1,0 +1,10 @@
+[server]
+
+storagedir = ~/.worknoteBook/storage
+url = 127.0.0.1
+port = 8080
+user_db = ~/.worknoteBook/users.dat
+
+[Demo Chapter]
+chapter_dir = ~/.worknoteBook/storage/demo_chapter
+
